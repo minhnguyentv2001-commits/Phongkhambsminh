@@ -17,6 +17,8 @@
             --text: #333333;
             --card-bg: #ffffff;
             --border: #f8bbd0;
+            --revisit-bg: #e8f5e9; /* Xanh Pastel cho BN Tái Khám */
+            --revisit-border: #a5d6a7;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -54,8 +56,8 @@
         }
         nav button {
             flex: 1;
-            min-width: 120px;
-            padding: 12px 15px;
+            min-width: 110px;
+            padding: 12px 10px;
             border: none;
             background: none;
             font-weight: 600;
@@ -128,6 +130,23 @@
         th, td { border: 1px solid #f0f0f0; padding: 9px 10px; text-align: left; }
         th { background: var(--primary-light); color: var(--primary); font-weight: 700; }
         tr:nth-child(even) { background: #fffcfd; }
+
+        /* HÀNG CHỜ PHONG CÁCH MỚI */
+        .waiting-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+        .waiting-card.is-revisit {
+            background-color: var(--revisit-bg) !important;
+            border-color: var(--revisit-border) !important;
+        }
 
         .print-area { display: none; }
 
@@ -237,10 +256,11 @@
 
 <nav>
     <button class="active" onclick="showTab('nhan-benh')">1. Nhận Bệnh</button>
-    <button onclick="showTab('ke-don')">2. Kê Đơn & In Đơn</button>
-    <button onclick="showTab('kho-thuoc')">3. Kho Thuốc</button>
-    <button onclick="showTab('ma-icd')">4. Danh Mục ICD</button>
-    <button onclick="showTab('lich-su')">5. Lịch Sử Khám</button>
+    <button onclick="showTab('cho-kham')">2. Chờ Khám (<span id="waitingCount">0</span>)</button>
+    <button onclick="showTab('ke-don')">3. Kê Đơn & In Đơn</button>
+    <button onclick="showTab('kho-thuoc')">4. Kho Thuốc</button>
+    <button onclick="showTab('ma-icd')">5. Danh Mục ICD</button>
+    <button onclick="showTab('lich-su')">6. Lịch Sử Khám</button>
 </nav>
 
 <div class="container">
@@ -274,10 +294,9 @@
                     <label>Địa chỉ:</label>
                     <input type="text" id="patientAddress" placeholder="Địa chỉ thường trú">
                 </div>
-                <!-- BỔ SUNG Ô NHẬP TÊN NGƯỜI NHÀ -->
                 <div class="form-group full">
-                    <label>Họ tên Bố / Mẹ / Người giám hộ (dành cho BN trẻ em / hiển thị ở footer toa):</label>
-                    <input type="text" id="patientGuardian" placeholder="Nhập tên người thân (nếu có)...">
+                    <label>Họ tên Bố / Mẹ / Người giám hộ (nếu có):</label>
+                    <input type="text" id="patientGuardian" placeholder="Nhập tên người thân...">
                 </div>
             </div>
         </div>
@@ -295,22 +314,36 @@
                 <div class="form-group full"><label>Kết quả Cận lâm sàng (CLS nếu có):</label><textarea id="clsResults" rows="2" placeholder="X-Quang, Xét nghiệm, Siêu âm..."></textarea></div>
             </div>
             <div style="margin-top: 15px; text-align: right;">
-                <button class="btn" onclick="savePatientToPrescription()">Chuyển Đến Kê Đơn Thuốc &rarr;</button>
+                <button class="btn" onclick="addToWaitingList()">Lưu & Chuyển Sang Hàng Chờ Khám &rarr;</button>
             </div>
         </div>
     </div>
 
-    <!-- TAB 2: KÊ ĐƠN & IN ĐƠN THUỐC -->
+    <!-- TAB 2: CHỜ KHÁM -->
+    <div id="cho-kham" class="tab-content">
+        <div class="card">
+            <div class="card-title">DANH SÁCH BỆNH NHÂN ĐANG CHỜ KHÁM</div>
+            <div style="font-size: 13px; margin-bottom: 12px; color: #555;">
+                <span style="display:inline-block; width:14px; height:14px; background:var(--revisit-bg); border:1px solid var(--revisit-border); vertical-align:middle; margin-right:5px; border-radius:3px;"></span>
+                <span>Thẻ màu xanh pastel là bệnh nhân tái khám trùng ngày hẹn hôm nay.</span>
+            </div>
+            <div id="waitingListContainer">
+                <!-- Danh sách bệnh nhân chờ khám sẽ đổ vào đây -->
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: KÊ ĐƠN & IN ĐƠN THUỐC -->
     <div id="ke-don" class="tab-content">
         <div class="card">
             <div class="card-title">BỆNH NHÂN HIỆN TẠI</div>
             <div id="currentPatientBrief" style="font-size: 14px; font-weight: bold; color: var(--primary);">
-                Chưa chọn bệnh nhân. Vui lòng nhập ở tab "Nhận Bệnh".
+                Chưa chọn bệnh nhân. Vui lòng chọn ở tab "Chờ Khám".
             </div>
         </div>
 
         <div class="card">
-            <div class="card-title">CHẨN ĐOÁN & CHỌN THUỐC</div>
+            <div class="card-title">CHẨN ĐOÁN, CHỌN THUỐC & HẸN TÁI KHÁM</div>
             <div class="form-grid">
                 <div class="form-group full">
                     <label>Chẩn đoán bệnh / Mã ICD:</label>
@@ -336,6 +369,18 @@
                 <div class="form-group"><label>Tổng số lượng:</label><input type="number" id="medTotalQty" readonly style="background: #e9ecef; font-weight: bold;"></div>
                 <div class="form-group" style="grid-column: span 2;"><label>Cách dùng:</label><input type="text" id="medUsageNote" placeholder="Uống sau ăn..."></div>
                 <div class="form-group" style="align-self: flex-end;"><button class="btn" onclick="addMedicineToPrescription()">+ Thêm Thuốc</button></div>
+            </div>
+
+            <!-- BỔ SUNG KHU VỰC HẸN TÁI KHÁM TỰ ĐỘNG -->
+            <div class="form-grid" style="margin-top: 15px; border-top: 1px dashed var(--border); padding-top: 12px;">
+                <div class="form-group">
+                    <label style="color: var(--primary);">Hẹn tái khám sau (số ngày):</label>
+                    <input type="number" id="revisitDays" value="0" min="0" placeholder="Nhập số ngày..." onchange="updateRevisitDateText()">
+                </div>
+                <div class="form-group" style="grid-column: span 2; justify-content: center;">
+                    <label>Ngày hẹn tái khám dự kiến:</label>
+                    <input type="text" id="revisitDateCalcText" readonly style="background: #f8f9fa; font-weight: bold; color: var(--primary);" value="Không hẹn tái khám">
+                </div>
             </div>
 
             <table style="margin-top:15px;">
@@ -378,7 +423,7 @@
         </div>
     </div>
 
-    <!-- TAB 3: KHO THUỐC -->
+    <!-- TAB 4: KHO THUỐC -->
     <div id="kho-thuoc" class="tab-content">
         <div class="card">
             <div class="card-title">THÊM / CẬP NHẬT THUỐC VÀO KHO</div>
@@ -418,7 +463,7 @@
         </div>
     </div>
 
-    <!-- TAB 4: DANH MỤC ICD -->
+    <!-- TAB 5: DANH MỤC ICD -->
     <div id="ma-icd" class="tab-content">
         <div class="card">
             <div class="card-title">THÊM MÃ ICD & TÊN BỆNH</div>
@@ -444,7 +489,7 @@
         </div>
     </div>
 
-    <!-- TAB 5: LỊCH SỬ KHÁM -->
+    <!-- TAB 6: LỊCH SỬ KHÁM -->
     <div id="lich-su" class="tab-content">
         <div class="card">
             <div class="card-title">LỊCH SỬ KHÁM BỆNH</div>
@@ -469,7 +514,6 @@
     </div>
 </div>
 
-<!-- MODAL BẢO XEM CHI TIẾT LÂM SÀNG & SINH TỒN -->
 <div id="detailModal" class="modal">
     <div class="modal-content">
         <span class="close-modal" onclick="closeDetailModal()">&times;</span>
@@ -527,6 +571,7 @@
         renderStock();
         renderICD();
         renderHistory();
+        renderWaitingList();
         updatePatientDatalist();
     };
 
@@ -578,14 +623,17 @@
                     stockData = data.stock || [];
                     icdData = data.icd || [];
                     historyData = data.history || [];
+                    waitingList = data.waiting || [];
 
                     localStorage.setItem('pk_stock', JSON.stringify(stockData));
                     localStorage.setItem('pk_icd', JSON.stringify(icdData));
                     localStorage.setItem('pk_history', JSON.stringify(historyData));
+                    localStorage.setItem('pk_waiting', JSON.stringify(waitingList));
 
                     renderStock();
                     renderICD();
                     renderHistory();
+                    renderWaitingList();
                     updatePatientDatalist();
                     document.getElementById('syncStatus').innerText = 'Đã đồng bộ với Google Drive!';
                 }
@@ -608,6 +656,7 @@
                 stock: stockData,
                 icd: icdData,
                 history: historyData,
+                waiting: waitingList,
                 updatedAt: new Date().toISOString()
             };
 
@@ -653,6 +702,7 @@
     let stockData = JSON.parse(localStorage.getItem('pk_stock')) || [];
     let icdData = JSON.parse(localStorage.getItem('pk_icd')) || [];
     let historyData = JSON.parse(localStorage.getItem('pk_history')) || [];
+    let waitingList = JSON.parse(localStorage.getItem('pk_waiting')) || [];
     let currentPatient = {};
     let prescriptionMeds = [];
 
@@ -660,10 +710,11 @@
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
-        event.target.classList.add('active');
+        
+        let activeBtn = Array.from(document.querySelectorAll('nav button')).find(btn => btn.getAttribute('onclick').includes(tabId));
+        if(activeBtn) activeBtn.classList.add('active');
     }
 
-    // CẬP NHẬT DATALIST MÃ VÀ TÊN BỆNH NHÂN CŨ
     function updatePatientDatalist() {
         let codeList = document.getElementById('oldPatientCodes');
         let nameList = document.getElementById('oldPatientNames');
@@ -701,24 +752,22 @@
 
     function autofillPatientByCode(code) {
         let match = historyData.find(item => item.patient.code === code);
-        if (match) {
-            fillPatientFields(match.patient);
-        }
+        if (match) fillPatientFields(match.patient);
     }
 
     function autofillPatientByName(name) {
         let match = historyData.find(item => item.patient.name.toLowerCase() === name.trim().toLowerCase());
-        if (match) {
-            fillPatientFields(match.patient);
-        }
+        if (match) fillPatientFields(match.patient);
     }
 
-    function savePatientToPrescription() {
+    // TÍNH NĂNG MỚI 1: THÊM BỆNH NHÂN VÀO HÀNG CHỜ KHÁM
+    function addToWaitingList() {
         let code = document.getElementById('patientCode').value.trim() || 'BN' + Date.now().toString().slice(-6);
         let name = document.getElementById('patientName').value.trim();
         if (!name) { alert('Vui lòng nhập họ tên bệnh nhân!'); return; }
 
-        currentPatient = {
+        let pData = {
+            id: Date.now(),
             code: code,
             name: name,
             age: document.getElementById('patientAge').value,
@@ -735,10 +784,107 @@
             cls: document.getElementById('clsResults').value
         };
 
-        document.getElementById('currentPatientBrief').innerText = 
-            `[Mã: ${currentPatient.code}] ${currentPatient.name} - ${currentPatient.age} tuổi - ${currentPatient.gender} - ĐC: ${currentPatient.address}`;
+        waitingList.push(pData);
+        localStorage.setItem('pk_waiting', JSON.stringify(waitingList));
+        renderWaitingList();
+        saveToDrive();
 
-        showTab('ke-don');
+        // Reset form tiếp nhận
+        resetCurrentPatientForm();
+        alert('Đã lưu bệnh nhân vào danh sách Hàng Chờ Khám!');
+        showTab('cho-kham');
+    }
+
+    // TÍNH NĂNG MỚI 2: HIỂN THỊ HÀNG CHỜ VÀ ĐỐI SOÁT TÁI KHÁM (MÀU XANH PASTEL)
+    function renderWaitingList() {
+        let container = document.getElementById('waitingListContainer');
+        let countEl = document.getElementById('waitingCount');
+        container.innerHTML = '';
+        countEl.innerText = waitingList.length;
+
+        if (waitingList.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">Hiện chưa có bệnh nhân nào trong hàng chờ.</div>';
+            return;
+        }
+
+        let todayStr = new Date().toLocaleDateString('vi-VN');
+
+        waitingList.forEach((item, index) => {
+            // Kiểm tra xem bệnh nhân cũ này có hẹn tái khám trùng ngày hôm nay không
+            let isRevisitToday = false;
+            let matchHistory = historyData.filter(h => h.patient.code === item.code || h.patient.name.toLowerCase() === item.name.toLowerCase());
+            
+            if (matchHistory.length > 0) {
+                // Kiểm tra lượt khám mới nhất có hẹn tái khám hôm nay không
+                let latest = matchHistory[0];
+                if (latest.revisitDateStr === todayStr) {
+                    isRevisitToday = true;
+                }
+            }
+
+            container.innerHTML += `
+                <div class="waiting-card ${isRevisitToday ? 'is-revisit' : ''}">
+                    <div>
+                        <div style="font-size: 15px; font-weight: bold; color: var(--primary);">
+                            #${index + 1}. [${item.code}] ${item.name} - ${item.age} tuổi (${item.gender})
+                            ${isRevisitToday ? '<span style="background:#2e7d32; color:#fff; font-size:11px; padding:2px 6px; border-radius:10px; margin-left:8px;">Hôm nay tái khám</span>' : ''}
+                        </div>
+                        <div style="font-size: 13px; color: #555; margin-top: 4px;">
+                            <strong>Địa chỉ:</strong> ${item.address || 'Không có'} | <strong>Huyết áp:</strong> ${item.bp || '-'} | <strong>Mạch:</strong> ${item.pulse || '-'}
+                        </div>
+                        <div style="font-size: 13px; color: #666; margin-top: 2px;">
+                            <strong>Triệu chứng:</strong> ${item.symptoms || 'Không ghi nhận'}
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-success" onclick="selectPatientForExam(${item.id})">🩺 Khám & Kê Toa</button>
+                        <button class="btn btn-danger" style="padding: 6px 10px;" onclick="removeFromWaitingList(${item.id})">Xóa</button>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    function selectPatientForExam(id) {
+        let p = waitingList.find(w => w.id === id);
+        if (p) {
+            currentPatient = {...p};
+            document.getElementById('currentPatientBrief').innerText = 
+                `[Mã: ${currentPatient.code}] ${currentPatient.name} - ${currentPatient.age} tuổi - ${currentPatient.gender} - ĐC: ${currentPatient.address}`;
+            
+            showTab('ke-don');
+        }
+    }
+
+    function removeFromWaitingList(id) {
+        if (confirm('Xóa bệnh nhân này khỏi danh sách chờ?')) {
+            waitingList = waitingList.filter(w => w.id !== id);
+            localStorage.setItem('pk_waiting', JSON.stringify(waitingList));
+            renderWaitingList();
+            saveToDrive();
+        }
+    }
+
+    // TÍNH NĂNG MỚI 3: TỰ ĐỘNG TÍNH NGÀY HẸN TÁI KHÁM
+    function updateRevisitDateText() {
+        let days = parseInt(document.getElementById('revisitDays').value) || 0;
+        let textInput = document.getElementById('revisitDateCalcText');
+        
+        if (days <= 0) {
+            textInput.value = 'Không hẹn tái khám';
+            return { days: 0, dateStr: null };
+        }
+
+        let targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + days);
+
+        let d = String(targetDate.getDate()).padStart(2, '0');
+        let m = String(targetDate.getMonth() + 1).padStart(2, '0');
+        let y = targetDate.getFullYear();
+
+        let dateStr = `${d}/${m}/${y}`;
+        textInput.value = `Hẹn ngày ${dateStr} (${days} ngày nữa)`;
+        return { days: days, dateStr: dateStr };
     }
 
     function resetCurrentPatientForm() {
@@ -760,9 +906,11 @@
         document.getElementById('clsResults').value = '';
         document.getElementById('prescriptionICD').value = '';
         document.getElementById('searchMedicine').value = '';
+        document.getElementById('revisitDays').value = 0;
+        updateRevisitDateText();
         document.getElementById('extraFeeCheck').checked = false;
         
-        document.getElementById('currentPatientBrief').innerText = 'Chưa chọn bệnh nhân. Vui lòng nhập ở tab "Nhận Bệnh".';
+        document.getElementById('currentPatientBrief').innerText = 'Chưa chọn bệnh nhân. Vui lòng chọn ở tab "Chờ Khám".';
         renderPrescriptionTable();
     }
 
@@ -965,6 +1113,7 @@
     function savePrescriptionRecord() {
         let totals = calculateGrandTotal();
         let icdVal = document.getElementById('prescriptionICD').value;
+        let revisitInfo = updateRevisitDateText();
 
         prescriptionMeds.forEach(m => {
             if (m.stockId) {
@@ -981,10 +1130,22 @@
             patient: currentPatient,
             icd: icdVal,
             meds: [...prescriptionMeds],
-            totals: totals
+            totals: totals,
+            revisitDays: revisitInfo.days,
+            revisitDateStr: revisitInfo.dateStr
         };
+
+        // Lưu vào lịch sử
         historyData.unshift(record);
         localStorage.setItem('pk_history', JSON.stringify(historyData));
+
+        // Xóa khỏi danh sách chờ khám
+        if (currentPatient.id) {
+            waitingList = waitingList.filter(w => w.id !== currentPatient.id);
+            localStorage.setItem('pk_waiting', JSON.stringify(waitingList));
+            renderWaitingList();
+        }
+
         renderHistory();
         updatePatientDatalist();
 
@@ -993,7 +1154,7 @@
     }
 
     function completePrescription(printType) {
-        if (!currentPatient.name) { alert('Chưa có thông tin bệnh nhân!'); return; }
+        if (!currentPatient.name) { alert('Chưa chọn bệnh nhân khám!'); return; }
 
         let record = savePrescriptionRecord();
         buildPrintHTML(record, printType);
@@ -1003,12 +1164,12 @@
     }
 
     function finishExaminationOnly() {
-        if (!currentPatient.name) { alert('Chưa có thông tin bệnh nhân!'); return; }
+        if (!currentPatient.name) { alert('Chưa chọn bệnh nhân khám!'); return; }
 
         savePrescriptionRecord();
         alert('Đã hoàn tất khám và lưu hồ sơ thành công!');
         resetCurrentPatientForm();
-        showTab('nhan-benh');
+        showTab('cho-kham');
     }
 
     function deletePrescriptionRecord(id) {
@@ -1023,9 +1184,7 @@
                 record.meds.forEach(m => {
                     if (m.stockId) {
                         let st = stockData.find(s => s.id === m.stockId);
-                        if (st) {
-                            st.qty += m.qty;
-                        }
+                        if (st) st.qty += m.qty;
                     }
                 });
                 localStorage.setItem('pk_stock', JSON.stringify(stockData));
@@ -1045,12 +1204,12 @@
         let p = record.patient;
         let html = '';
 
-        if (printType === 'prescription') {
-            let today = new Date();
-            let day = String(today.getDate()).padStart(2, '0');
-            let month = String(today.getMonth() + 1).padStart(2, '0');
-            let year = today.getFullYear();
+        let today = new Date();
+        let day = String(today.getDate()).padStart(2, '0');
+        let month = String(today.getMonth() + 1).padStart(2, '0');
+        let year = today.getFullYear();
 
+        if (printType === 'prescription') {
             let medsListHTML = record.meds.map((m, idx) => {
                 let doseParts = [];
                 let u = m.unit ? m.unit : '';
@@ -1081,8 +1240,13 @@
                 `;
             }).join('');
 
-            // HIỂN THỊ TÊN NGƯỜI NHÀ Ở FOOTER NẾU CÓ
             let guardianDisplay = p.guardian ? `<strong>${p.guardian}</strong>` : '..........................................................................................';
+            
+            // XỬ LÝ LỜI DẶN VỚI NGÀY HẸN TÁI KHÁM TỰ ĐỘNG
+            let adviceText = "Hẹn tái khám sau khi hết thuốc hoặc có dấu hiệu bất thường.";
+            if (record.revisitDays && record.revisitDays > 0) {
+                adviceText = `Hẹn tái khám sau ${record.revisitDays} ngày (ngày ${record.revisitDateStr}) hoặc khi có dấu hiệu bất thường.`;
+            }
 
             html = `
                 <div class="flex-row" style="justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
@@ -1124,7 +1288,7 @@
 
                 <div style="margin-bottom: 8px; font-size: 9.5pt;">
                     <div style="font-weight: bold; text-transform: uppercase; margin-bottom: 2px;">LỜI DẶN:</div>
-                    <div>Hẹn tái khám sau khi hết thuốc hoặc có dấu hiệu bất thường.</div>
+                    <div>${adviceText}</div>
                 </div>
 
                 <div class="flex-row" style="justify-content: flex-end; text-align: center; margin-top: 15px; margin-bottom: 25px; font-size: 10pt;">
@@ -1186,7 +1350,7 @@
                 <div class="flex-row" style="margin-top: 20px; justify-content: space-between; text-align: center; font-size: 10pt;">
                     <div><p>Người lập bảng</p></div>
                     <div>
-                        <p><em>Ngày ..... tháng ..... năm 20...</em></p>
+                        <p><em>Ngày ${day} tháng ${month} năm ${year}</em></p>
                         <p><strong>BÁC SĨ ĐIỀU TRỊ</strong></p>
                         <br><br>
                         <p><strong>BS. Nguyễn Bảo Minh</strong></p>
@@ -1228,7 +1392,6 @@
         });
     }
 
-    // TÍNH NĂNG XEM CHI TIẾT SINH TỒN & LÂM SÀNG
     function viewHistoryDetail(id) {
         let record = historyData.find(item => item.id === id);
         if (!record) return;
@@ -1242,6 +1405,7 @@
             ${p.guardian ? `<p><strong>Người nhà/Giám hộ:</strong> ${p.guardian}</p>` : ''}
             <p><strong>Ngày khám:</strong> ${record.date}</p>
             <p><strong>Chẩn đoán ICD:</strong> ${record.icd || 'Khám thông thường'}</p>
+            ${record.revisitDateStr ? `<p style="color:var(--primary); font-weight:bold;">Hẹn tái khám ngày: ${record.revisitDateStr} (${record.revisitDays} ngày)</p>` : ''}
             <hr style="margin: 10px 0;">
             <p style="color: var(--primary); font-weight: bold;">DẤU HIỆU SINH TỒN:</p>
             <ul>
