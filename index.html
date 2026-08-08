@@ -131,7 +131,31 @@
 
         .print-area { display: none; }
 
-        /* --- CSS CHO BẢN IN A5 --- */
+        /* MODAL XEM CHI TIẾT */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            align-items: center; justify-content: center;
+        }
+        .modal-content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        .close-modal {
+            position: absolute; right: 15px; top: 10px;
+            font-size: 24px; font-weight: bold; cursor: pointer; color: #888;
+        }
+
+        /* CSS CHO BẢN IN A5 */
         @media print {
             @page {
                 size: A5 portrait;
@@ -174,15 +198,8 @@
                 display: revert !important;
             }
 
-            /* Đảm bảo span, strong, i không bị rớt dòng bất thường */
             #printArea span, #printArea strong, #printArea i {
                 display: inline-block !important;
-            }
-
-            #printArea .med-header {
-                display: flex !important;
-                justify-content: space-between !important;
-                align-items: baseline !important;
             }
 
             #printArea .med-dose-row {
@@ -234,12 +251,13 @@
             <div class="form-grid">
                 <div class="form-group">
                     <label>Mã Bệnh Nhân (Gợi ý BN cũ):</label>
-                    <input type="text" id="patientCode" list="oldPatientCodes" placeholder="Nhập mã hoặc chọn BN cũ..." onchange="autofillPatient(this.value)">
+                    <input type="text" id="patientCode" list="oldPatientCodes" placeholder="Nhập mã hoặc chọn BN cũ..." onchange="autofillPatientByCode(this.value)">
                     <datalist id="oldPatientCodes"></datalist>
                 </div>
                 <div class="form-group">
                     <label>Họ và Tên (*):</label>
-                    <input type="text" id="patientName" placeholder="Tên bệnh nhân">
+                    <input type="text" id="patientName" list="oldPatientNames" placeholder="Tên bệnh nhân..." onchange="autofillPatientByName(this.value)">
+                    <datalist id="oldPatientNames"></datalist>
                 </div>
                 <div class="form-group">
                     <label>Tuổi:</label>
@@ -255,6 +273,11 @@
                 <div class="form-group full">
                     <label>Địa chỉ:</label>
                     <input type="text" id="patientAddress" placeholder="Địa chỉ thường trú">
+                </div>
+                <!-- BỔ SUNG Ô NHẬP TÊN NGƯỜI NHÀ -->
+                <div class="form-group full">
+                    <label>Họ tên Bố / Mẹ / Người giám hộ (dành cho BN trẻ em / hiển thị ở footer toa):</label>
+                    <input type="text" id="patientGuardian" placeholder="Nhập tên người thân (nếu có)...">
                 </div>
             </div>
         </div>
@@ -446,6 +469,15 @@
     </div>
 </div>
 
+<!-- MODAL BẢO XEM CHI TIẾT LÂM SÀNG & SINH TỒN -->
+<div id="detailModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeDetailModal()">&times;</span>
+        <div class="card-title" style="margin-bottom: 10px;">CHI TIẾT BỆNH ÁN KHÁM</div>
+        <div id="modalBody" style="font-size: 13.5px; line-height: 1.6;"></div>
+    </div>
+</div>
+
 <div id="printArea" class="print-area">
     <div id="printContent"></div>
 </div>
@@ -631,29 +663,53 @@
         event.target.classList.add('active');
     }
 
+    // CẬP NHẬT DATALIST MÃ VÀ TÊN BỆNH NHÂN CŨ
     function updatePatientDatalist() {
-        let list = document.getElementById('oldPatientCodes');
-        list.innerHTML = '';
-        let uniquePatients = {};
+        let codeList = document.getElementById('oldPatientCodes');
+        let nameList = document.getElementById('oldPatientNames');
+        codeList.innerHTML = '';
+        nameList.innerHTML = '';
+        let uniquePatientsByCode = {};
+        let uniquePatientsByName = {};
+
         historyData.forEach(item => {
-            if (item.patient.code && !uniquePatients[item.patient.code]) {
-                uniquePatients[item.patient.code] = item.patient;
+            if (item.patient.code && !uniquePatientsByCode[item.patient.code]) {
+                uniquePatientsByCode[item.patient.code] = item.patient;
                 let option = document.createElement('option');
                 option.value = item.patient.code;
                 option.label = item.patient.name + " - " + item.patient.address;
-                list.appendChild(option);
+                codeList.appendChild(option);
+            }
+            if (item.patient.name && !uniquePatientsByName[item.patient.name.toLowerCase()]) {
+                uniquePatientsByName[item.patient.name.toLowerCase()] = item.patient;
+                let option = document.createElement('option');
+                option.value = item.patient.name;
+                option.label = "Mã: " + item.patient.code + " - " + item.patient.address;
+                nameList.appendChild(option);
             }
         });
     }
 
-    function autofillPatient(code) {
+    function fillPatientFields(p) {
+        document.getElementById('patientCode').value = p.code || '';
+        document.getElementById('patientName').value = p.name || '';
+        document.getElementById('patientAge').value = p.age || '';
+        document.getElementById('patientGender').value = p.gender || 'Nam';
+        document.getElementById('patientAddress').value = p.address || '';
+        document.getElementById('patientGuardian').value = p.guardian || '';
+    }
+
+    function autofillPatientByCode(code) {
         let match = historyData.find(item => item.patient.code === code);
         if (match) {
-            let p = match.patient;
-            document.getElementById('patientName').value = p.name || '';
-            document.getElementById('patientAge').value = p.age || '';
-            document.getElementById('patientGender').value = p.gender || 'Nam';
-            document.getElementById('patientAddress').value = p.address || '';
+            fillPatientFields(match.patient);
+        }
+    }
+
+    function autofillPatientByName(name) {
+        let match = historyData.find(item => item.patient.name.toLowerCase() === name.trim().toLowerCase());
+        if (match) {
+            fillPatientFields(match.patient);
         }
     }
 
@@ -668,6 +724,7 @@
             age: document.getElementById('patientAge').value,
             gender: document.getElementById('patientGender').value,
             address: document.getElementById('patientAddress').value,
+            guardian: document.getElementById('patientGuardian').value,
             bp: document.getElementById('vitalBP').value,
             pulse: document.getElementById('vitalPulse').value,
             temp: document.getElementById('vitalTemp').value,
@@ -692,6 +749,7 @@
         document.getElementById('patientAge').value = '';
         document.getElementById('patientGender').value = 'Nam';
         document.getElementById('patientAddress').value = '';
+        document.getElementById('patientGuardian').value = '';
         document.getElementById('vitalBP').value = '';
         document.getElementById('vitalPulse').value = '';
         document.getElementById('vitalTemp').value = '';
@@ -1023,6 +1081,9 @@
                 `;
             }).join('');
 
+            // HIỂN THỊ TÊN NGƯỜI NHÀ Ở FOOTER NẾU CÓ
+            let guardianDisplay = p.guardian ? `<strong>${p.guardian}</strong>` : '..........................................................................................';
+
             html = `
                 <div class="flex-row" style="justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
                     <div>
@@ -1077,7 +1138,7 @@
                 </div>
 
                 <div style="font-size: 8pt; font-style: italic; border-top: 0.5px solid #ccc; padding-top: 4px; margin-top: 10px;">
-                    <div>Họ tên bố hoặc mẹ nếu người bệnh dưới 72 tháng tuổi: ..........................................................................................</div>
+                    <div>Họ tên bố hoặc mẹ nếu người bệnh dưới 72 tháng tuổi: ${guardianDisplay}</div>
                     <div>Khám lại xin mang theo đơn này</div>
                 </div>
             `;
@@ -1157,6 +1218,7 @@
                     <td>${item.icd || '-'}</td>
                     <td>${item.totals.grandTotal.toLocaleString('vi-VN')} đ</td>
                     <td>
+                        <button class="btn btn-outline" style="padding:2px 6px; font-size:12px;" onclick="viewHistoryDetail(${item.id})">🔍 Chi Tiết</button>
                         <button class="btn" style="padding:2px 6px; font-size:12px;" onclick="reprintHistory(${item.id}, 'prescription')">In Toa</button>
                         <button class="btn btn-outline" style="padding:2px 6px; font-size:12px;" onclick="reprintHistory(${item.id}, 'bill')">In Bảng Kê</button>
                         <button class="btn btn-danger" style="padding:2px 6px; font-size:12px;" onclick="deletePrescriptionRecord(${item.id})">Xóa Toa</button>
@@ -1164,6 +1226,44 @@
                 </tr>
             `;
         });
+    }
+
+    // TÍNH NĂNG XEM CHI TIẾT SINH TỒN & LÂM SÀNG
+    function viewHistoryDetail(id) {
+        let record = historyData.find(item => item.id === id);
+        if (!record) return;
+
+        let p = record.patient;
+        let medsHtml = record.meds.map((m, i) => `<li><strong>${m.tradeName}</strong>: SL ${m.qty} ${m.unit} (${m.usageNote || 'Uống'})</li>`).join('');
+
+        let html = `
+            <p><strong>Bệnh nhân:</strong> ${p.name} (${p.age}t - ${p.gender})</p>
+            <p><strong>Mã BN:</strong> ${p.code} | <strong>ĐC:</strong> ${p.address || 'Chưa nhập'}</p>
+            ${p.guardian ? `<p><strong>Người nhà/Giám hộ:</strong> ${p.guardian}</p>` : ''}
+            <p><strong>Ngày khám:</strong> ${record.date}</p>
+            <p><strong>Chẩn đoán ICD:</strong> ${record.icd || 'Khám thông thường'}</p>
+            <hr style="margin: 10px 0;">
+            <p style="color: var(--primary); font-weight: bold;">DẤU HIỆU SINH TỒN:</p>
+            <ul>
+                <li>Huyết áp: ${p.bp || '-'} mmHg | Mạch: ${p.pulse || '-'} lần/phút</li>
+                <li>Nhiệt độ: ${p.temp || '-'} °C | Nhịp thở: ${p.resp || '-'} lần/phút</li>
+                <li>Cân nặng: ${p.weight || '-'} kg | Chiều cao: ${p.height || '-'} cm</li>
+            </ul>
+            <hr style="margin: 10px 0;">
+            <p style="color: var(--primary); font-weight: bold;">LÂM SÀNG & CẬN LÂM SÀNG:</p>
+            <p><strong>Triệu chứng lâm sàng:</strong> ${p.symptoms || 'Không ghi nhận'}</p>
+            <p><strong>Kết quả CLS:</strong> ${p.cls || 'Không có'}</p>
+            <hr style="margin: 10px 0;">
+            <p style="color: var(--primary); font-weight: bold;">DANH SÁCH THUỐC ĐÃ KÊ:</p>
+            <ol style="padding-left: 20px;">${medsHtml}</ol>
+        `;
+
+        document.getElementById('modalBody').innerHTML = html;
+        document.getElementById('detailModal').style.display = 'flex';
+    }
+
+    function closeDetailModal() {
+        document.getElementById('detailModal').style.display = 'none';
     }
 
     function reprintHistory(id, type) {
