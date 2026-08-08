@@ -129,15 +129,40 @@
 
         .print-area { display: none; }
 
+        /* --- PHẦN CẤU HÌNH IN ĐÃ ĐƯỢC TỐI ƯU ĐỂ TRÁNH TRANG TRẮNG --- */
         @media print {
-            body * { visibility: hidden; }
-            .print-area, .print-area * { visibility: visible; }
-            .print-area {
-                position: absolute; left: 0; top: 0; width: 148mm; height: 210mm;
-                padding: 10mm 12mm 8mm 12mm; background: white; color: black;
-                font-family: 'Times New Roman', Times, serif; font-size: 11pt; line-height: 1.35; box-sizing: border-box;
+            /* Ẩn hoàn toàn tất cả các phần tử UI ngoài khu vực in */
+            body > *:not(.print-area) {
+                display: none !important;
             }
-            @page { size: A5 portrait; margin: 0; }
+
+            /* Đưa trang in về đúng khung hình A5 */
+            body, html {
+                background: #fff !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                height: auto !important;
+            }
+
+            .print-area {
+                display: block !important;
+                position: relative !important;
+                width: 100% !important;
+                height: auto !important;
+                margin: 0 !important;
+                padding: 5mm 8mm !important;
+                background: white !important;
+                color: black !important;
+                font-family: 'Times New Roman', Times, serif;
+                font-size: 11pt;
+                line-height: 1.35;
+                box-sizing: border-box !important;
+            }
+
+            @page {
+                size: A5 portrait;
+                margin: 0;
+            }
         }
     </style>
 </head>
