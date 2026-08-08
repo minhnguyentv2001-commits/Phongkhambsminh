@@ -170,8 +170,13 @@
                 color: black !important;
             }
 
-            #printArea div, #printArea p, #printArea span, #printArea table, #printArea tbody, #printArea tr, #printArea td, #printArea th {
+            #printArea div, #printArea p, #printArea table, #printArea tbody, #printArea tr, #printArea td, #printArea th {
                 display: revert !important;
+            }
+
+            /* Đảm bảo span, strong, i không bị rớt dòng bất thường */
+            #printArea span, #printArea strong, #printArea i {
+                display: inline-block !important;
             }
 
             #printArea .med-header {
@@ -183,11 +188,12 @@
             #printArea .med-dose-row {
                 display: flex !important;
                 flex-direction: row !important;
-                flex-wrap: wrap !important;
+                flex-wrap: nowrap !important;
                 gap: 15px !important;
                 padding-left: 20px !important;
                 font-size: 9.5pt !important;
                 margin-top: 2px !important;
+                white-space: nowrap !important;
             }
 
             #printArea .flex-row {
@@ -344,7 +350,6 @@
             <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
                 <button class="btn" onclick="completePrescription('prescription')">🖨️ In Đơn Thuốc (A5)</button>
                 <button class="btn btn-outline" onclick="completePrescription('bill')">🧾 In Bảng Kê Chi Phí</button>
-                <!-- NÚT MỚI: HOÀN TẤT KHÁM -->
                 <button class="btn btn-success" onclick="finishExaminationOnly()">✅ Hoàn Tất Khám (Không In)</button>
             </div>
         </div>
@@ -899,7 +904,6 @@
         return { examFee, medSum, extraFee, grandTotal };
     }
 
-    // TÍNH NĂNG 1: THỰC HIỆN LƯU VÀ HOÀN TẤT BỆNH NHÂN (DÙNG CHUNG)
     function savePrescriptionRecord() {
         let totals = calculateGrandTotal();
         let icdVal = document.getElementById('prescriptionICD').value;
@@ -940,7 +944,6 @@
         }, 100);
     }
 
-    // NÚT MỚI: HOÀN TẤT KHÁM MÀ KHÔNG BẬT LỆNH IN
     function finishExaminationOnly() {
         if (!currentPatient.name) { alert('Chưa có thông tin bệnh nhân!'); return; }
 
@@ -950,7 +953,6 @@
         showTab('nhan-benh');
     }
 
-    // TÍNH NĂNG 2: XÓA TOA THUỐC TRONG LỊCH SỬ
     function deletePrescriptionRecord(id) {
         let index = historyData.findIndex(item => item.id === id);
         if (index === -1) return;
@@ -959,7 +961,6 @@
         let restoreStock = confirm(`Bạn có chắc muốn xóa toa thuốc của bệnh nhân "${record.patient.name}"?\n\n- Bấm OK để XÓA VÀ HOÀN LẠI THUỐC VÀO KHO.\n- Bấm Cancel nếu muốn HỦY thao tác.`);
         
         if (restoreStock) {
-            // Hoàn trả số lượng thuốc lại cho Kho
             if (record.meds && record.meds.length > 0) {
                 record.meds.forEach(m => {
                     if (m.stockId) {
@@ -973,7 +974,6 @@
                 renderStock();
             }
 
-            // Xóa bản ghi lịch sử
             historyData.splice(index, 1);
             localStorage.setItem('pk_history', JSON.stringify(historyData));
             renderHistory();
@@ -996,28 +996,28 @@
             let medsListHTML = record.meds.map((m, idx) => {
                 let doseParts = [];
                 let u = m.unit ? m.unit : '';
-                if (parseFloat(m.morning) > 0) doseParts.push(`<i>Sáng: ${m.morning} ${u}</i>`);
-                if (parseFloat(m.noon) > 0) doseParts.push(`<i>Trưa: ${m.noon} ${u}</i>`);
-                if (parseFloat(m.afternoon) > 0) doseParts.push(`<i>Chiều: ${m.afternoon} ${u}</i>`);
-                if (parseFloat(m.evening) > 0) doseParts.push(`<i>Tối: ${m.evening} ${u}</i>`);
+                if (parseFloat(m.morning) > 0) doseParts.push(`Sáng: ${m.morning} ${u}`);
+                if (parseFloat(m.noon) > 0) doseParts.push(`Trưa: ${m.noon} ${u}`);
+                if (parseFloat(m.afternoon) > 0) doseParts.push(`Chiều: ${m.afternoon} ${u}`);
+                if (parseFloat(m.evening) > 0) doseParts.push(`Tối: ${m.evening} ${u}`);
 
                 let doseStr = doseParts.join('&nbsp;&nbsp;&nbsp;&nbsp;');
-                let routeStr = m.usageNote ? `<i>${m.usageNote}</i>` : '<i>Uống</i>';
+                let routeStr = m.usageNote ? m.usageNote : 'Uống';
 
                 return `
                     <div style="margin-bottom: 6px;">
-                        <div class="med-header" style="font-size: 10.5pt;">
-                            <div>
-                                <span style="font-weight: bold; margin-right: 4px;">${idx + 1}.</span>
-                                <strong>${m.tradeName}</strong>
+                        <div class="flex-row" style="justify-content: space-between; align-items: baseline; font-size: 10.5pt;">
+                            <div class="flex-row" style="align-items: baseline;">
+                                <span style="font-weight: bold; margin-right: 5px;">${idx + 1}.</span>
+                                <strong style="font-size: 10.5pt;">${m.tradeName}</strong>
                             </div>
                             <div>
                                 <span>SL: ${m.qty} ${m.unit}</span>
                             </div>
                         </div>
                         <div class="med-dose-row">
-                            <span>${routeStr}</span>
-                            <span>${doseStr}</span>
+                            <span style="font-style: italic; margin-right: 15px;">${routeStr}</span>
+                            <span style="font-style: italic;">${doseStr}</span>
                         </div>
                     </div>
                 `;
@@ -1040,8 +1040,8 @@
                 </div>
 
                 <div style="font-size: 10pt; line-height: 1.35; margin-bottom: 8px;">
-                    <div class="flex-row">
-                        <span style="width: 70px;">Họ và tên:</span>
+                    <div class="flex-row" style="align-items: baseline;">
+                        <span style="margin-right: 5px;">Họ và tên:</span>
                         <strong style="text-transform: uppercase; font-size: 10.5pt; flex: 1;">${p.name}</strong>
                         <span style="margin-right: 15px;">Tuổi: ${p.age}</span>
                         <span>Giới tính: ${p.gender}</span>
@@ -1091,9 +1091,14 @@
                 <div style="text-align: center; font-size: 13pt; font-weight: bold; margin: 10px 0; text-transform: uppercase;">BẢNG KÊ CHI PHÍ KHÁM BỆNH</div>
                 
                 <div style="font-size: 10pt; line-height: 1.4; margin-bottom: 10px;">
-                    <div class="flex-row" style="justify-content: space-between;">
-                        <span>Họ và tên: <strong style="text-transform: uppercase;">${p.name}</strong></span>
-                        <span>Tuổi: ${p.age}</span>
+                    <div class="flex-row" style="justify-content: space-between; align-items: baseline;">
+                        <div class="flex-row" style="align-items: baseline;">
+                            <span style="margin-right: 5px;">Họ và tên:</span>
+                            <strong style="text-transform: uppercase; font-size: 10.5pt;">${p.name}</strong>
+                        </div>
+                        <div>
+                            <span>Tuổi: ${p.age}</span>
+                        </div>
                     </div>
                     <div>
                         <span>Địa chỉ: ${p.address || ''}</span>
