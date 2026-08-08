@@ -17,7 +17,7 @@
             --text: #333333;
             --card-bg: #ffffff;
             --border: #f8bbd0;
-            --revisit-bg: #e8f5e9; /* Xanh Pastel cho BN Tái Khám */
+            --revisit-bg: #e8f5e9;
             --revisit-border: #a5d6a7;
         }
 
@@ -125,13 +125,13 @@
         .btn-success:hover { background: #1b5e20; }
         .btn-danger { background: #e53935; }
         .btn-danger:hover { background: #c62828; }
+        .btn-sm { padding: 3px 8px; font-size: 12px; }
 
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13.5px; }
         th, td { border: 1px solid #f0f0f0; padding: 9px 10px; text-align: left; }
         th { background: var(--primary-light); color: var(--primary); font-weight: 700; }
         tr:nth-child(even) { background: #fffcfd; }
 
-        /* HÀNG CHỜ PHONG CÁCH MỚI */
         .waiting-card {
             background: #ffffff;
             border: 1px solid var(--border);
@@ -150,7 +150,6 @@
 
         .print-area { display: none; }
 
-        /* MODAL XEM CHI TIẾT */
         .modal {
             display: none;
             position: fixed;
@@ -174,7 +173,6 @@
             font-size: 24px; font-weight: bold; cursor: pointer; color: #888;
         }
 
-        /* CSS CHO BẢN IN A5 */
         @media print {
             @page {
                 size: A5 portrait;
@@ -327,9 +325,7 @@
                 <span style="display:inline-block; width:14px; height:14px; background:var(--revisit-bg); border:1px solid var(--revisit-border); vertical-align:middle; margin-right:5px; border-radius:3px;"></span>
                 <span>Thẻ màu xanh pastel là bệnh nhân tái khám trùng ngày hẹn hôm nay.</span>
             </div>
-            <div id="waitingListContainer">
-                <!-- Danh sách bệnh nhân chờ khám sẽ đổ vào đây -->
-            </div>
+            <div id="waitingListContainer"></div>
         </div>
     </div>
 
@@ -371,7 +367,6 @@
                 <div class="form-group" style="align-self: flex-end;"><button class="btn" onclick="addMedicineToPrescription()">+ Thêm Thuốc</button></div>
             </div>
 
-            <!-- BỔ SUNG KHU VỰC HẸN TÁI KHÁM TỰ ĐỘNG -->
             <div class="form-grid" style="margin-top: 15px; border-top: 1px dashed var(--border); padding-top: 12px;">
                 <div class="form-group">
                     <label style="color: var(--primary);">Hẹn tái khám sau (số ngày):</label>
@@ -383,9 +378,11 @@
                 </div>
             </div>
 
+            <!-- BẢNG DANH SÁCH THUỐC BỔ SUNG CỘT SẮP XẾP HÀNG -->
             <table style="margin-top:15px;">
                 <thead>
                     <tr>
+                        <th style="width: 80px; text-align: center;">Sắp Xếp</th>
                         <th>Tên Thuốc / Hoạt Chất</th>
                         <th>ĐVT</th>
                         <th>Liều (S-T-C-T)</th>
@@ -393,7 +390,7 @@
                         <th>Cách Dùng</th>
                         <th>Đơn Giá</th>
                         <th>Thành Tiền</th>
-                        <th>Xóa</th>
+                        <th style="width: 50px;">Xóa</th>
                     </tr>
                 </thead>
                 <tbody id="prescriptionTableBody"></tbody>
@@ -760,7 +757,6 @@
         if (match) fillPatientFields(match.patient);
     }
 
-    // TÍNH NĂNG MỚI 1: THÊM BỆNH NHÂN VÀO HÀNG CHỜ KHÁM
     function addToWaitingList() {
         let code = document.getElementById('patientCode').value.trim() || 'BN' + Date.now().toString().slice(-6);
         let name = document.getElementById('patientName').value.trim();
@@ -789,13 +785,11 @@
         renderWaitingList();
         saveToDrive();
 
-        // Reset form tiếp nhận
         resetCurrentPatientForm();
         alert('Đã lưu bệnh nhân vào danh sách Hàng Chờ Khám!');
         showTab('cho-kham');
     }
 
-    // TÍNH NĂNG MỚI 2: HIỂN THỊ HÀNG CHỜ VÀ ĐỐI SOÁT TÁI KHÁM (MÀU XANH PASTEL)
     function renderWaitingList() {
         let container = document.getElementById('waitingListContainer');
         let countEl = document.getElementById('waitingCount');
@@ -810,12 +804,10 @@
         let todayStr = new Date().toLocaleDateString('vi-VN');
 
         waitingList.forEach((item, index) => {
-            // Kiểm tra xem bệnh nhân cũ này có hẹn tái khám trùng ngày hôm nay không
             let isRevisitToday = false;
             let matchHistory = historyData.filter(h => h.patient.code === item.code || h.patient.name.toLowerCase() === item.name.toLowerCase());
             
             if (matchHistory.length > 0) {
-                // Kiểm tra lượt khám mới nhất có hẹn tái khám hôm nay không
                 let latest = matchHistory[0];
                 if (latest.revisitDateStr === todayStr) {
                     isRevisitToday = true;
@@ -865,7 +857,6 @@
         }
     }
 
-    // TÍNH NĂNG MỚI 3: TỰ ĐỘNG TÍNH NGÀY HẸN TÁI KHÁM
     function updateRevisitDateText() {
         let days = parseInt(document.getElementById('revisitDays').value) || 0;
         let textInput = document.getElementById('revisitDateCalcText');
@@ -957,7 +948,7 @@
                     <td><strong style="color: ${item.qty < 10 ? 'red' : 'green'}">${item.qty}</strong></td>
                     <td>${item.price.toLocaleString('vi-VN')} đ</td>
                     <td>${item.route} - ${item.timing}</td>
-                    <td><button class="btn btn-danger" style="padding:2px 8px; font-size:12px;" onclick="deleteStock(${index})">Xóa</button></td>
+                    <td><button class="btn btn-danger btn-sm" onclick="deleteStock(${index})">Xóa</button></td>
                 </tr>
             `;
 
@@ -1001,7 +992,7 @@
                 <tr>
                     <td><strong>${item.code}</strong></td>
                     <td>${item.name}</td>
-                    <td><button class="btn btn-danger" style="padding:2px 8px; font-size:12px;" onclick="deleteICD(${index})">Xóa</button></td>
+                    <td><button class="btn btn-danger btn-sm" onclick="deleteICD(${index})">Xóa</button></td>
                 </tr>
             `;
 
@@ -1070,6 +1061,20 @@
         selectedMedObj = null;
     }
 
+    // THÊM CÁC HÀM ĐỔI THỨ TỰ THUỐC (ĐỔI VỊ TRÍ MẢNG)
+    function moveMedicineOrder(idx, direction) {
+        if (direction === 'up' && idx > 0) {
+            let temp = prescriptionMeds[idx];
+            prescriptionMeds[idx] = prescriptionMeds[idx - 1];
+            prescriptionMeds[idx - 1] = temp;
+        } else if (direction === 'down' && idx < prescriptionMeds.length - 1) {
+            let temp = prescriptionMeds[idx];
+            prescriptionMeds[idx] = prescriptionMeds[idx + 1];
+            prescriptionMeds[idx + 1] = temp;
+        }
+        renderPrescriptionTable();
+    }
+
     function renderPrescriptionTable() {
         let tbody = document.getElementById('prescriptionTableBody');
         tbody.innerHTML = '';
@@ -1079,6 +1084,10 @@
             medSum += m.totalPrice;
             tbody.innerHTML += `
                 <tr>
+                    <td style="text-align: center;">
+                        <button class="btn btn-outline btn-sm" style="padding: 1px 4px; margin-right: 2px;" onclick="moveMedicineOrder(${idx}, 'up')" ${idx === 0 ? 'disabled' : ''}>⬆️</button>
+                        <button class="btn btn-outline btn-sm" style="padding: 1px 4px;" onclick="moveMedicineOrder(${idx}, 'down')" ${idx === prescriptionMeds.length - 1 ? 'disabled' : ''}>⬇️</button>
+                    </td>
                     <td><strong>${m.tradeName}</strong></td>
                     <td>${m.unit}</td>
                     <td>${m.morning}-${m.noon}-${m.afternoon}-${m.evening} (${m.days} ngày)</td>
@@ -1086,7 +1095,7 @@
                     <td>${m.usageNote}</td>
                     <td>${m.price.toLocaleString('vi-VN')} đ</td>
                     <td>${m.totalPrice.toLocaleString('vi-VN')} đ</td>
-                    <td><button class="btn btn-danger" style="padding:2px 6px;" onclick="removePrescriptionMed(${idx})">X</button></td>
+                    <td><button class="btn btn-danger btn-sm" onclick="removePrescriptionMed(${idx})">X</button></td>
                 </tr>
             `;
         });
@@ -1135,11 +1144,9 @@
             revisitDateStr: revisitInfo.dateStr
         };
 
-        // Lưu vào lịch sử
         historyData.unshift(record);
         localStorage.setItem('pk_history', JSON.stringify(historyData));
 
-        // Xóa khỏi danh sách chờ khám
         if (currentPatient.id) {
             waitingList = waitingList.filter(w => w.id !== currentPatient.id);
             localStorage.setItem('pk_waiting', JSON.stringify(waitingList));
@@ -1242,7 +1249,6 @@
 
             let guardianDisplay = p.guardian ? `<strong>${p.guardian}</strong>` : '..........................................................................................';
             
-            // XỬ LÝ LỜI DẶN VỚI NGÀY HẸN TÁI KHÁM TỰ ĐỘNG
             let adviceText = "Hẹn tái khám sau khi hết thuốc hoặc có dấu hiệu bất thường.";
             if (record.revisitDays && record.revisitDays > 0) {
                 adviceText = `Hẹn tái khám sau ${record.revisitDays} ngày (ngày ${record.revisitDateStr}) hoặc khi có dấu hiệu bất thường.`;
@@ -1382,10 +1388,10 @@
                     <td>${item.icd || '-'}</td>
                     <td>${item.totals.grandTotal.toLocaleString('vi-VN')} đ</td>
                     <td>
-                        <button class="btn btn-outline" style="padding:2px 6px; font-size:12px;" onclick="viewHistoryDetail(${item.id})">🔍 Chi Tiết</button>
-                        <button class="btn" style="padding:2px 6px; font-size:12px;" onclick="reprintHistory(${item.id}, 'prescription')">In Toa</button>
-                        <button class="btn btn-outline" style="padding:2px 6px; font-size:12px;" onclick="reprintHistory(${item.id}, 'bill')">In Bảng Kê</button>
-                        <button class="btn btn-danger" style="padding:2px 6px; font-size:12px;" onclick="deletePrescriptionRecord(${item.id})">Xóa Toa</button>
+                        <button class="btn btn-outline btn-sm" onclick="viewHistoryDetail(${item.id})">🔍 Chi Tiết</button>
+                        <button class="btn btn-sm" onclick="reprintHistory(${item.id}, 'prescription')">In Toa</button>
+                        <button class="btn btn-outline btn-sm" onclick="reprintHistory(${item.id}, 'bill')">In Bảng Kê</button>
+                        <button class="btn btn-danger btn-sm" onclick="deletePrescriptionRecord(${item.id})">Xóa Toa</button>
                     </td>
                 </tr>
             `;
