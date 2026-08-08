@@ -17,8 +17,10 @@
             --text: #333333;
             --card-bg: #ffffff;
             --border: #f8bbd0;
-            --revisit-bg: #e8f5e9;
+            --revisit-bg: #e8f5e9; /* Xanh Pastel cho BN Tái Khám */
             --revisit-border: #a5d6a7;
+            --priority-bg: #fff9c4; /* Vàng Pastel cho BN Ưu Tiên */
+            --priority-border: #fff59d;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -132,6 +134,7 @@
         th { background: var(--primary-light); color: var(--primary); font-weight: 700; }
         tr:nth-child(even) { background: #fffcfd; }
 
+        /* KHỐI HÀNG CHỜ KHÁM */
         .waiting-card {
             background: #ffffff;
             border: 1px solid var(--border);
@@ -143,9 +146,15 @@
             align-items: center;
             transition: all 0.2s;
         }
+        /* MÀU XANH PASTEL CHO BN TÁI KHÁM */
         .waiting-card.is-revisit {
             background-color: var(--revisit-bg) !important;
             border-color: var(--revisit-border) !important;
+        }
+        /* MÀU VÀNG PASTEL CHO BN ƯU TIÊN */
+        .waiting-card.is-priority {
+            background-color: var(--priority-bg) !important;
+            border-color: var(--priority-border) !important;
         }
 
         .print-area { display: none; }
@@ -293,8 +302,15 @@
                     <input type="text" id="patientAddress" placeholder="Địa chỉ thường trú">
                 </div>
                 <div class="form-group full">
-                    <label>Họ tên Bố / Mẹ / Người giám hộ (nếu có):</label>
+                    <label>Họ tên Người thân (nếu có):</label>
                     <input type="text" id="patientGuardian" placeholder="Nhập tên người thân...">
+                </div>
+                <!-- BỔ SUNG Ô TICK ĐỐI TƯỢNG ƯU TIÊN -->
+                <div class="form-group full" style="margin-top: 5px;">
+                    <label style="cursor: pointer; display: flex; align-items: center; gap: 8px; color: #d32f2f; font-weight: bold;">
+                        <input type="checkbox" id="patientPriority" style="width: 18px; height: 18px; cursor: pointer;">
+                        Đối tượng ưu tiên (Người già, Trẻ nhỏ, Cấp cứu...)
+                    </label>
                 </div>
             </div>
         </div>
@@ -321,9 +337,15 @@
     <div id="cho-kham" class="tab-content">
         <div class="card">
             <div class="card-title">DANH SÁCH BỆNH NHÂN ĐANG CHỜ KHÁM</div>
-            <div style="font-size: 13px; margin-bottom: 12px; color: #555;">
-                <span style="display:inline-block; width:14px; height:14px; background:var(--revisit-bg); border:1px solid var(--revisit-border); vertical-align:middle; margin-right:5px; border-radius:3px;"></span>
-                <span>Thẻ màu xanh pastel là bệnh nhân tái khám trùng ngày hẹn hôm nay.</span>
+            <div style="font-size: 13px; margin-bottom: 12px; color: #555; display: flex; gap: 20px;">
+                <div>
+                    <span style="display:inline-block; width:14px; height:14px; background:var(--priority-bg); border:1px solid var(--priority-border); vertical-align:middle; margin-right:5px; border-radius:3px;"></span>
+                    <span>Thẻ màu vàng pastel là Bệnh nhân ưu tiên.</span>
+                </div>
+                <div>
+                    <span style="display:inline-block; width:14px; height:14px; background:var(--revisit-bg); border:1px solid var(--revisit-border); vertical-align:middle; margin-right:5px; border-radius:3px;"></span>
+                    <span>Thẻ màu xanh pastel là Bệnh nhân tái khám trùng ngày.</span>
+                </div>
             </div>
             <div id="waitingListContainer"></div>
         </div>
@@ -378,7 +400,6 @@
                 </div>
             </div>
 
-            <!-- BẢNG DANH SÁCH THUỐC BỔ SUNG CỘT SẮP XẾP HÀNG -->
             <table style="margin-top:15px;">
                 <thead>
                     <tr>
@@ -770,6 +791,7 @@
             gender: document.getElementById('patientGender').value,
             address: document.getElementById('patientAddress').value,
             guardian: document.getElementById('patientGuardian').value,
+            isPriority: document.getElementById('patientPriority').checked, // LƯU TRẠNG THÁI ƯU TIÊN
             bp: document.getElementById('vitalBP').value,
             pulse: document.getElementById('vitalPulse').value,
             temp: document.getElementById('vitalTemp').value,
@@ -814,11 +836,20 @@
                 }
             }
 
+            // ĐÁNH DẤU LỚP DÙNG CHO MÀU TÔ (ƯU TIÊN LÀM MÀU VÀNG PASTEL, TÁI KHÁM LÀ MÀU XANH PASTEL)
+            let cardClass = '';
+            if (item.isPriority) {
+                cardClass = 'is-priority';
+            } else if (isRevisitToday) {
+                cardClass = 'is-revisit';
+            }
+
             container.innerHTML += `
-                <div class="waiting-card ${isRevisitToday ? 'is-revisit' : ''}">
+                <div class="waiting-card ${cardClass}">
                     <div>
                         <div style="font-size: 15px; font-weight: bold; color: var(--primary);">
                             #${index + 1}. [${item.code}] ${item.name} - ${item.age} tuổi (${item.gender})
+                            ${item.isPriority ? '<span style="background:#f57f17; color:#fff; font-size:11px; padding:2px 6px; border-radius:10px; margin-left:8px;">ƯU TIÊN KHÁM</span>' : ''}
                             ${isRevisitToday ? '<span style="background:#2e7d32; color:#fff; font-size:11px; padding:2px 6px; border-radius:10px; margin-left:8px;">Hôm nay tái khám</span>' : ''}
                         </div>
                         <div style="font-size: 13px; color: #555; margin-top: 4px;">
@@ -887,6 +918,7 @@
         document.getElementById('patientGender').value = 'Nam';
         document.getElementById('patientAddress').value = '';
         document.getElementById('patientGuardian').value = '';
+        document.getElementById('patientPriority').checked = false; // RESET TICK ƯU TIÊN
         document.getElementById('vitalBP').value = '';
         document.getElementById('vitalPulse').value = '';
         document.getElementById('vitalTemp').value = '';
@@ -1061,7 +1093,6 @@
         selectedMedObj = null;
     }
 
-    // THÊM CÁC HÀM ĐỔI THỨ TỰ THUỐC (ĐỔI VỊ TRÍ MẢNG)
     function moveMedicineOrder(idx, direction) {
         if (direction === 'up' && idx > 0) {
             let temp = prescriptionMeds[idx];
@@ -1247,6 +1278,7 @@
                 `;
             }).join('');
 
+            // ĐỔI DÒNG THÔNG TIN NGƯỜI THÂN Ở FOOTER TOA THUỐC
             let guardianDisplay = p.guardian ? `<strong>${p.guardian}</strong>` : '..........................................................................................';
             
             let adviceText = "Hẹn tái khám sau khi hết thuốc hoặc có dấu hiệu bất thường.";
@@ -1307,8 +1339,9 @@
                     </div>
                 </div>
 
+                <!-- ĐỔI DÒNG THÀNH "Người thân:" -->
                 <div style="font-size: 8pt; font-style: italic; border-top: 0.5px solid #ccc; padding-top: 4px; margin-top: 10px;">
-                    <div>Họ tên bố hoặc mẹ nếu người bệnh dưới 72 tháng tuổi: ${guardianDisplay}</div>
+                    <div>Người thân: ${guardianDisplay}</div>
                     <div>Khám lại xin mang theo đơn này</div>
                 </div>
             `;
@@ -1408,7 +1441,7 @@
         let html = `
             <p><strong>Bệnh nhân:</strong> ${p.name} (${p.age}t - ${p.gender})</p>
             <p><strong>Mã BN:</strong> ${p.code} | <strong>ĐC:</strong> ${p.address || 'Chưa nhập'}</p>
-            ${p.guardian ? `<p><strong>Người nhà/Giám hộ:</strong> ${p.guardian}</p>` : ''}
+            ${p.guardian ? `<p><strong>Người thân:</strong> ${p.guardian}</p>` : ''}
             <p><strong>Ngày khám:</strong> ${record.date}</p>
             <p><strong>Chẩn đoán ICD:</strong> ${record.icd || 'Khám thông thường'}</p>
             ${record.revisitDateStr ? `<p style="color:var(--primary); font-weight:bold;">Hẹn tái khám ngày: ${record.revisitDateStr} (${record.revisitDays} ngày)</p>` : ''}
