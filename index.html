@@ -1,0 +1,1036 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PHÒNG KHÁM ĐA KHOA BS. MINH</title>
+    <!-- Google Identity Services & GAPI Client -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+    <style>
+        :root {
+            --primary: #d81b60;
+            --primary-hover: #ad1457;
+            --primary-light: #fce4ec;
+            --accent: #ff6090;
+            --bg: #fff5f8;
+            --text: #333333;
+            --card-bg: #ffffff;
+            --border: #f8bbd0;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); padding-bottom: 40px; }
+
+        header {
+            background: linear-gradient(135deg, #d81b60, #ff6090);
+            color: white;
+            padding: 18px 20px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(216, 27, 96, 0.2);
+            position: relative;
+        }
+        header h1 { font-size: 22px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+        header p { font-size: 13px; opacity: 0.95; line-height: 1.4; }
+
+        .auth-bar {
+            background: #fff;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+        .sync-status { font-size: 13px; font-weight: 600; color: #555; }
+
+        nav {
+            display: flex;
+            background: white;
+            border-bottom: 2px solid var(--border);
+            overflow-x: auto;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        nav button {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px 15px;
+            border: none;
+            background: none;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 3px solid transparent;
+        }
+        nav button:hover, nav button.active {
+            color: var(--primary);
+            background: var(--primary-light);
+            border-bottom-color: var(--primary);
+        }
+
+        .container { max-width: 1100px; margin: 20px auto; padding: 0 15px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--primary-light);
+            padding-bottom: 8px;
+        }
+
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group.full { grid-column: 1 / -1; }
+        label { font-size: 13px; font-weight: 600; margin-bottom: 4px; color: #555; }
+        input, select, textarea {
+            padding: 8px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+            transition: border 0.2s;
+        }
+        input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(216, 27, 96, 0.1); }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 9px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        .btn:hover { background: var(--primary-hover); }
+        .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
+        .btn-outline:hover { background: var(--primary-light); }
+        .btn-danger { background: #e53935; }
+        .btn-danger:hover { background: #c62828; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13.5px; }
+        th, td { border: 1px solid #f0f0f0; padding: 9px 10px; text-align: left; }
+        th { background: var(--primary-light); color: var(--primary); font-weight: 700; }
+        tr:nth-child(even) { background: #fffcfd; }
+
+        .print-area { display: none; }
+
+        @media print {
+            body * { visibility: hidden; }
+            .print-area, .print-area * { visibility: visible; }
+            .print-area {
+                position: absolute; left: 0; top: 0; width: 148mm; height: 210mm;
+                padding: 10mm 12mm 8mm 12mm; background: white; color: black;
+                font-family: 'Times New Roman', Times, serif; font-size: 11pt; line-height: 1.35; box-sizing: border-box;
+            }
+            @page { size: A5 portrait; margin: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>PHÒNG KHÁM ĐA KHOA BS. MINH</h1>
+    <p>Địa chỉ: 274, Quốc lộ 53, khóm Đa Cần, phường Hòa Thuận, tỉnh Vĩnh Long</p>
+    <p>Bác sĩ điều trị: Nguyễn Bảo Minh | Điện thoại/Zalo: 0977973104</p>
+</header>
+
+<div class="auth-bar">
+    <div class="sync-status" id="syncStatus">Trạng thái: Chưa xác thực Google Drive</div>
+    <div>
+        <button id="authBtn" class="btn" onclick="handleAuthClick()">Đăng Nhập Google Drive</button>
+        <button id="syncBtn" class="btn btn-outline" style="display:none;" onclick="syncWithDrive()">🔄 Đồng Bộ Ngay</button>
+    </div>
+</div>
+
+<nav>
+    <button class="active" onclick="showTab('nhan-benh')">1. Nhận Bệnh</button>
+    <button onclick="showTab('ke-don')">2. Kê Đơn & In Đơn</button>
+    <button onclick="showTab('kho-thuoc')">3. Kho Thuốc</button>
+    <button onclick="showTab('ma-icd')">4. Danh Mục ICD</button>
+    <button onclick="showTab('lich-su')">5. Lịch Sử Khám</button>
+</nav>
+
+<div class="container">
+    <!-- TAB 1: NHẬN BỆNH -->
+    <div id="nhan-benh" class="tab-content active">
+        <div class="card">
+            <div class="card-title">TIẾP NHẬN BỆNH NHÂN</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Mã Bệnh Nhân (Gợi ý BN cũ):</label>
+                    <input type="text" id="patientCode" list="oldPatientCodes" placeholder="Nhập mã hoặc chọn BN cũ..." onchange="autofillPatient(this.value)">
+                    <datalist id="oldPatientCodes"></datalist>
+                </div>
+                <div class="form-group">
+                    <label>Họ và Tên (*):</label>
+                    <input type="text" id="patientName" placeholder="Tên bệnh nhân">
+                </div>
+                <div class="form-group">
+                    <label>Tuổi:</label>
+                    <input type="number" id="patientAge" placeholder="Tuổi">
+                </div>
+                <div class="form-group">
+                    <label>Giới tính:</label>
+                    <select id="patientGender">
+                        <option value="Nam">Nam</option>
+                        <option value="Nữ">Nữ</option>
+                    </select>
+                </div>
+                <div class="form-group full">
+                    <label>Địa chỉ:</label>
+                    <input type="text" id="patientAddress" placeholder="Địa chỉ thường trú">
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">DẤU HIỆU SINH TỒN & LÂM SÀNG</div>
+            <div class="form-grid">
+                <div class="form-group"><label>Huyết áp (mmHg):</label><input type="text" id="vitalBP" placeholder="120/80"></div>
+                <div class="form-group"><label>Mạch (lần/phút):</label><input type="number" id="vitalPulse" placeholder="75"></div>
+                <div class="form-group"><label>Nhiệt độ (°C):</label><input type="text" id="vitalTemp" placeholder="36.5"></div>
+                <div class="form-group"><label>Nhịp thở (lần/phút):</label><input type="number" id="vitalResp" placeholder="18"></div>
+                <div class="form-group"><label>Cân nặng (kg):</label><input type="text" id="vitalWeight" placeholder="60"></div>
+                <div class="form-group"><label>Chiều cao (cm):</label><input type="text" id="vitalHeight" placeholder="165"></div>
+                <div class="form-group full"><label>Triệu chứng lâm sàng:</label><textarea id="clinicalSymptoms" rows="2" placeholder="Nhập triệu chứng khám..."></textarea></div>
+                <div class="form-group full"><label>Kết quả Cận lâm sàng (CLS nếu có):</label><textarea id="clsResults" rows="2" placeholder="X-Quang, Xét nghiệm, Siêu âm..."></textarea></div>
+            </div>
+            <div style="margin-top: 15px; text-align: right;">
+                <button class="btn" onclick="savePatientToPrescription()">Chuyển Đến Kê Đơn Thuốc &rarr;</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: KÊ ĐƠN & IN ĐƠN THUỐC -->
+    <div id="ke-don" class="tab-content">
+        <div class="card">
+            <div class="card-title">BỆNH NHÂN HIỆN TẠI</div>
+            <div id="currentPatientBrief" style="font-size: 14px; font-weight: bold; color: var(--primary);">
+                Chưa chọn bệnh nhân. Vui lòng nhập ở tab "Nhận Bệnh".
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">CHẨN ĐOÁN & CHỌN THUỐC</div>
+            <div class="form-grid">
+                <div class="form-group full">
+                    <label>Chẩn đoán bệnh / Mã ICD:</label>
+                    <input type="text" id="prescriptionICD" list="icdList" placeholder="Tìm tên bệnh hoặc mã ICD...">
+                    <datalist id="icdList"></datalist>
+                </div>
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Tìm kiếm chọn thuốc trong kho:</label>
+                    <input type="text" id="searchMedicine" list="medList" placeholder="Gõ tên thuốc hoặc hoạt chất..." onchange="onSelectMedicine(this.value)">
+                    <datalist id="medList"></datalist>
+                </div>
+                <div class="form-group">
+                    <label>Số ngày thuốc:</label>
+                    <input type="number" id="medDays" value="3" min="1" onchange="recalcTotalMedQty()">
+                </div>
+            </div>
+
+            <div class="form-grid" style="margin-top: 12px; background: #fff0f5; padding: 12px; border-radius: 8px;">
+                <div class="form-group"><label>Sáng:</label><input type="number" id="doseMorning" value="1" onchange="recalcTotalMedQty()"></div>
+                <div class="form-group"><label>Trưa:</label><input type="number" id="doseNoon" value="0" onchange="recalcTotalMedQty()"></div>
+                <div class="form-group"><label>Chiều:</label><input type="number" id="doseAfternoon" value="1" onchange="recalcTotalMedQty()"></div>
+                <div class="form-group"><label>Tối:</label><input type="number" id="doseEvening" value="0" onchange="recalcTotalMedQty()"></div>
+                <div class="form-group"><label>Tổng số lượng:</label><input type="number" id="medTotalQty" readonly style="background: #e9ecef; font-weight: bold;"></div>
+                <div class="form-group" style="grid-column: span 2;"><label>Cách dùng:</label><input type="text" id="medUsageNote" placeholder="Uống sau ăn..."></div>
+                <div class="form-group" style="align-self: flex-end;"><button class="btn" onclick="addMedicineToPrescription()">+ Thêm Thuốc</button></div>
+            </div>
+
+            <table style="margin-top:15px;">
+                <thead>
+                    <tr>
+                        <th>Tên Thuốc / Hoạt Chất</th>
+                        <th>ĐVT</th>
+                        <th>Liều (S-T-C-T)</th>
+                        <th>Số Lượng</th>
+                        <th>Cách Dùng</th>
+                        <th>Đơn Giá</th>
+                        <th>Thành Tiền</th>
+                        <th>Xóa</th>
+                    </tr>
+                </thead>
+                <tbody id="prescriptionTableBody"></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <div class="card-title">THANH TOÁN & HOÀN TẤT</div>
+            <div style="font-size: 15px; line-height: 1.8;">
+                <div>Tiền khám bệnh mặc định: <strong>50.000 VNĐ</strong></div>
+                <div>Tổng tiền thuốc: <strong id="totalMedPriceText">0 VNĐ</strong></div>
+                <div>
+                    <label style="cursor: pointer;">
+                        <input type="checkbox" id="extraFeeCheck" onchange="calculateGrandTotal()">
+                        Thủ thuật / Chi phí phát sinh (+30.000 VNĐ)
+                    </label>
+                </div>
+                <div style="font-size: 18px; color: var(--primary); font-weight: bold; margin-top: 5px;">
+                    TỔNG CỘNG THANH TOÁN: <span id="grandTotalText">50.000 VNĐ</span>
+                </div>
+            </div>
+            <div style="margin-top: 15px; display: flex; gap: 10px;">
+                <button class="btn" onclick="completePrescription('prescription')">🖨️ In Đơn Thuốc (A5)</button>
+                <button class="btn btn-outline" onclick="completePrescription('bill')">🧾 In Bảng Kê Chi Phí</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: KHO THUỐC -->
+    <div id="kho-thuoc" class="tab-content">
+        <div class="card">
+            <div class="card-title">THÊM / CẬP NHẬT THUỐC VÀO KHO</div>
+            <div class="form-grid">
+                <div class="form-group"><label>Tên Thương Mại (*):</label><input type="text" id="stockTradeName"></div>
+                <div class="form-group"><label>Hoạt Chất / Tên Gốc:</label><input type="text" id="stockActiveIng"></div>
+                <div class="form-group"><label>Hàm Lượng (mg/g):</label><input type="text" id="stockStrength"></div>
+                <div class="form-group"><label>Đơn Vị Tính (ĐVT):</label><input type="text" id="stockUnit" placeholder="Viên/Gói/Ống/Chai..."></div>
+                <div class="form-group"><label>Số Lượng Tồn Kho:</label><input type="number" id="stockQty" value="100"></div>
+                <div class="form-group"><label>Dạng Thuốc:</label><input type="text" id="stockForm" placeholder="Viên nén, Dung dịch..."></div>
+                <div class="form-group"><label>Cách Dùng:</label><input type="text" id="stockRoute" placeholder="Uống, Bôi, Phun..."></div>
+                <div class="form-group"><label>Thời Điểm Dùng:</label><input type="text" id="stockTiming" placeholder="Sáng - Tối sau ăn..."></div>
+                <div class="form-group"><label>Đơn Giá (VNĐ):</label><input type="number" id="stockPrice" value="0"></div>
+            </div>
+            <div style="margin-top: 15px;">
+                <button class="btn" onclick="saveMedicineToStock()">Lưu Thuốc Vào Kho</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">DANH SÁCH THUỐC TRONG KHO</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tên Thuốc</th>
+                        <th>Hoạt Chất / Hàm Lượng</th>
+                        <th>ĐVT</th>
+                        <th>Dạng</th>
+                        <th>Tồn Kho</th>
+                        <th>Đơn Giá</th>
+                        <th>Cách Dùng Mặc Định</th>
+                        <th>Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody id="stockTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB 4: DANH MỤC ICD -->
+    <div id="ma-icd" class="tab-content">
+        <div class="card">
+            <div class="card-title">THÊM MÃ ICD & TÊN BỆNH</div>
+            <div class="form-grid">
+                <div class="form-group"><label>Mã ICD:</label><input type="text" id="icdCode" placeholder="Ví dụ: J00"></div>
+                <div class="form-group" style="grid-column: span 2;"><label>Tên Bệnh:</label><input type="text" id="icdName" placeholder="Ví dụ: Viêm mũi họng cấp (Cảm lạnh)"></div>
+                <div class="form-group" style="align-self: flex-end;"><button class="btn" onclick="saveICD()">Lưu Mã ICD</button></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">DANH SÁCH MÃ ICD ĐÃ NHẬP</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Mã ICD</th>
+                        <th>Tên Bệnh</th>
+                        <th>Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody id="icdTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB 5: LỊCH SỬ KHÁM -->
+    <div id="lich-su" class="tab-content">
+        <div class="card">
+            <div class="card-title">LỊCH SỬ KHÁM BỆNH</div>
+            <div class="form-grid" style="margin-bottom: 15px;">
+                <div class="form-group"><label>Tìm theo tên/mã BN hoặc ngày:</label><input type="text" id="historySearch" placeholder="Nhập tên, mã BN..." onkeyup="renderHistory()"></div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Thời Gian</th>
+                        <th>Mã BN</th>
+                        <th>Họ Tên</th>
+                        <th>Tuổi/Giới</th>
+                        <th>Chẩn Đoán</th>
+                        <th>Tổng Tiền</th>
+                        <th>Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="printArea" class="print-area">
+    <div id="printContent"></div>
+</div>
+
+<script>
+    // --- KHỞI TẠO GOOGLE DRIVE API & AUTHENTICATION ---
+    const CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com'; // Thay Client ID của bạn vào đây
+    const ALLOWED_EMAIL = 'nguyenminhctump@gmail.com';
+    const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
+    const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email';
+    const FILE_NAME = 'phongkham_database.json';
+
+    let tokenClient;
+    let gapiInited = false;
+    let gisInited = false;
+    let driveFileId = null;
+
+    function gapiLoaded() {
+        gapi.load('client', async () => {
+            await gapi.client.init({ discoveryDocs: [DISCOVERY_DOC] });
+            gapiInited = true;
+            checkAuthInit();
+        });
+    }
+
+    function gisLoaded() {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: CLIENT_ID,
+            scope: SCOPES,
+            callback: async (resp) => {
+                if (resp.error !== undefined) { throw (resp); }
+                await verifyAndLoadUser();
+            },
+        });
+        gisInited = true;
+        checkAuthInit();
+    }
+
+    function checkAuthInit() {
+        if (gapiInited && gisInited) {
+            document.getElementById('authBtn').style.display = 'inline-block';
+        }
+    }
+
+    window.onload = function() {
+        gapiLoaded();
+        gisLoaded();
+        renderStock();
+        renderICD();
+        renderHistory();
+        updatePatientDatalist();
+    };
+
+    function handleAuthClick() {
+        tokenClient.requestAccessToken({ prompt: 'consent' });
+    }
+
+    async function verifyAndLoadUser() {
+        try {
+            let res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                headers: { Authorization: `Bearer ${gapi.client.getToken().access_token}` }
+            });
+            let userInfo = await res.json();
+
+            if (userInfo.email !== ALLOWED_EMAIL) {
+                alert(`Tài khoản ${userInfo.email} không có quyền truy cập! Vui lòng đăng nhập bằng ${ALLOWED_EMAIL}`);
+                document.getElementById('syncStatus').innerText = 'Chặn truy cập: Email không khớp';
+                return;
+            }
+
+            document.getElementById('syncStatus').innerText = `Đã đăng nhập: ${userInfo.email}`;
+            document.getElementById('authBtn').style.display = 'none';
+            document.getElementById('syncBtn').style.display = 'inline-block';
+
+            await loadDataFromDrive();
+        } catch (err) {
+            console.error('Lỗi xác thực người dùng:', err);
+        }
+    }
+
+    async function loadDataFromDrive() {
+        try {
+            document.getElementById('syncStatus').innerText = 'Đang tải dữ liệu từ Google Drive...';
+            let res = await gapi.client.drive.files.list({
+                q: `name='${FILE_NAME}' and trashed=false`,
+                fields: 'files(id, name)',
+            });
+
+            let files = res.result.files;
+            if (files && files.length > 0) {
+                driveFileId = files[0].id;
+                let fileRes = await gapi.client.drive.files.get({
+                    fileId: driveFileId,
+                    alt: 'media'
+                });
+                
+                let data = fileRes.result;
+                if (data) {
+                    stockData = data.stock || [];
+                    icdData = data.icd || [];
+                    historyData = data.history || [];
+
+                    localStorage.setItem('pk_stock', JSON.stringify(stockData));
+                    localStorage.setItem('pk_icd', JSON.stringify(icdData));
+                    localStorage.setItem('pk_history', JSON.stringify(historyData));
+
+                    renderStock();
+                    renderICD();
+                    renderHistory();
+                    updatePatientDatalist();
+                    document.getElementById('syncStatus').innerText = 'Đã đồng bộ với Google Drive!';
+                }
+            } else {
+                document.getElementById('syncStatus').innerText = 'Tạo file lưu trữ mới trên Google Drive...';
+                await saveToDrive();
+            }
+        } catch (err) {
+            console.error('Lỗi khi tải dữ liệu từ Drive:', err);
+            document.getElementById('syncStatus').innerText = 'Lỗi đồng bộ Drive';
+        }
+    }
+
+    async function saveToDrive() {
+        if (!gapi.client.getToken()) return;
+
+        try {
+            document.getElementById('syncStatus').innerText = 'Đang sao lưu lên Google Drive...';
+            let dbContent = {
+                stock: stockData,
+                icd: icdData,
+                history: historyData,
+                updatedAt: new Date().toISOString()
+            };
+
+            let fileContent = JSON.stringify(dbContent);
+            let metadata = {
+                name: FILE_NAME,
+                mimeType: 'application/json'
+            };
+
+            if (driveFileId) {
+                await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
+                    method: 'PATCH',
+                    headers: {
+                        Authorization: `Bearer ${gapi.client.getToken().access_token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: fileContent
+                });
+            } else {
+                let form = new FormData();
+                form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                form.append('file', new Blob([fileContent], { type: 'application/json' }));
+
+                let res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${gapi.client.getToken().access_token}` },
+                    body: form
+                });
+                let file = await res.json();
+                driveFileId = file.id;
+            }
+            document.getElementById('syncStatus').innerText = 'Sao lưu Google Drive hoàn tất!';
+        } catch (err) {
+            console.error('Lỗi khi sao lưu lên Drive:', err);
+            document.getElementById('syncStatus').innerText = 'Lỗi khi sao lưu Drive';
+        }
+    }
+
+    function syncWithDrive() {
+        saveToDrive();
+    }
+
+    // --- DỮ LIỆU CỤC BỘ ---
+    let stockData = JSON.parse(localStorage.getItem('pk_stock')) || [];
+    let icdData = JSON.parse(localStorage.getItem('pk_icd')) || [];
+    let historyData = JSON.parse(localStorage.getItem('pk_history')) || [];
+    let currentPatient = {};
+    let prescriptionMeds = [];
+
+    function showTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        event.target.classList.add('active');
+    }
+
+    function updatePatientDatalist() {
+        let list = document.getElementById('oldPatientCodes');
+        list.innerHTML = '';
+        let uniquePatients = {};
+        historyData.forEach(item => {
+            if (item.patient.code && !uniquePatients[item.patient.code]) {
+                uniquePatients[item.patient.code] = item.patient;
+                let option = document.createElement('option');
+                option.value = item.patient.code;
+                option.label = item.patient.name + " - " + item.patient.address;
+                list.appendChild(option);
+            }
+        });
+    }
+
+    function autofillPatient(code) {
+        let match = historyData.find(item => item.patient.code === code);
+        if (match) {
+            let p = match.patient;
+            document.getElementById('patientName').value = p.name || '';
+            document.getElementById('patientAge').value = p.age || '';
+            document.getElementById('patientGender').value = p.gender || 'Nam';
+            document.getElementById('patientAddress').value = p.address || '';
+        }
+    }
+
+    function savePatientToPrescription() {
+        let code = document.getElementById('patientCode').value.trim() || 'BN' + Date.now().toString().slice(-6);
+        let name = document.getElementById('patientName').value.trim();
+        if (!name) { alert('Vui lòng nhập họ tên bệnh nhân!'); return; }
+
+        currentPatient = {
+            code: code,
+            name: name,
+            age: document.getElementById('patientAge').value,
+            gender: document.getElementById('patientGender').value,
+            address: document.getElementById('patientAddress').value,
+            bp: document.getElementById('vitalBP').value,
+            pulse: document.getElementById('vitalPulse').value,
+            temp: document.getElementById('vitalTemp').value,
+            resp: document.getElementById('vitalResp').value,
+            weight: document.getElementById('vitalWeight').value,
+            height: document.getElementById('vitalHeight').value,
+            symptoms: document.getElementById('clinicalSymptoms').value,
+            cls: document.getElementById('clsResults').value
+        };
+
+        document.getElementById('currentPatientBrief').innerText = 
+            `[Mã: ${currentPatient.code}] ${currentPatient.name} - ${currentPatient.age} tuổi - ${currentPatient.gender} - ĐC: ${currentPatient.address}`;
+
+        showTab('ke-don');
+    }
+
+    function saveMedicineToStock() {
+        let tradeName = document.getElementById('stockTradeName').value.trim();
+        if (!tradeName) { alert('Vui lòng nhập tên thương mại của thuốc!'); return; }
+
+        let item = {
+            id: Date.now(),
+            tradeName: tradeName,
+            activeIng: document.getElementById('stockActiveIng').value,
+            strength: document.getElementById('stockStrength').value,
+            unit: document.getElementById('stockUnit').value,
+            qty: parseInt(document.getElementById('stockQty').value) || 0,
+            form: document.getElementById('stockForm').value,
+            route: document.getElementById('stockRoute').value,
+            timing: document.getElementById('stockTiming').value,
+            price: parseFloat(document.getElementById('stockPrice').value) || 0
+        };
+
+        stockData.push(item);
+        localStorage.setItem('pk_stock', JSON.stringify(stockData));
+        renderStock();
+        saveToDrive();
+        alert('Đã lưu thuốc vào kho!');
+
+        document.getElementById('stockTradeName').value = '';
+        document.getElementById('stockActiveIng').value = '';
+    }
+
+    function renderStock() {
+        let tbody = document.getElementById('stockTableBody');
+        let medList = document.getElementById('medList');
+        tbody.innerHTML = '';
+        medList.innerHTML = '';
+
+        stockData.forEach((item, index) => {
+            tbody.innerHTML += `
+                <tr>
+                    <td><strong>${item.tradeName}</strong></td>
+                    <td>${item.activeIng} ${item.strength}</td>
+                    <td>${item.unit}</td>
+                    <td>${item.form}</td>
+                    <td><strong style="color: ${item.qty < 10 ? 'red' : 'green'}">${item.qty}</strong></td>
+                    <td>${item.price.toLocaleString('vi-VN')} đ</td>
+                    <td>${item.route} - ${item.timing}</td>
+                    <td><button class="btn btn-danger" style="padding:2px 8px; font-size:12px;" onclick="deleteStock(${index})">Xóa</button></td>
+                </tr>
+            `;
+
+            let option = document.createElement('option');
+            option.value = item.tradeName;
+            option.label = `${item.activeIng} (${item.unit}) - Tồn: ${item.qty}`;
+            medList.appendChild(option);
+        });
+    }
+
+    function deleteStock(index) {
+        if (confirm('Xóa thuốc này khỏi kho?')) {
+            stockData.splice(index, 1);
+            localStorage.setItem('pk_stock', JSON.stringify(stockData));
+            renderStock();
+            saveToDrive();
+        }
+    }
+
+    function saveICD() {
+        let code = document.getElementById('icdCode').value.trim();
+        let name = document.getElementById('icdName').value.trim();
+        if (!code || !name) { alert('Nhập đủ mã ICD và Tên bệnh!'); return; }
+
+        icdData.push({ code, name });
+        localStorage.setItem('pk_icd', JSON.stringify(icdData));
+        renderICD();
+        saveToDrive();
+        document.getElementById('icdCode').value = '';
+        document.getElementById('icdName').value = '';
+    }
+
+    function renderICD() {
+        let tbody = document.getElementById('icdTableBody');
+        let list = document.getElementById('icdList');
+        tbody.innerHTML = '';
+        list.innerHTML = '';
+
+        icdData.forEach((item, index) => {
+            tbody.innerHTML += `
+                <tr>
+                    <td><strong>${item.code}</strong></td>
+                    <td>${item.name}</td>
+                    <td><button class="btn btn-danger" style="padding:2px 8px; font-size:12px;" onclick="deleteICD(${index})">Xóa</button></td>
+                </tr>
+            `;
+
+            let option = document.createElement('option');
+            option.value = `${item.code} - ${item.name}`;
+            list.appendChild(option);
+        });
+    }
+
+    function deleteICD(index) {
+        icdData.splice(index, 1);
+        localStorage.setItem('pk_icd', JSON.stringify(icdData));
+        renderICD();
+        saveToDrive();
+    }
+
+    let selectedMedObj = null;
+
+    function onSelectMedicine(val) {
+        selectedMedObj = stockData.find(m => m.tradeName === val);
+        if (selectedMedObj) {
+            document.getElementById('medUsageNote').value = `${selectedMedObj.route} ${selectedMedObj.timing}`.trim();
+            recalcTotalMedQty();
+        }
+    }
+
+    function recalcTotalMedQty() {
+        let days = parseInt(document.getElementById('medDays').value) || 1;
+        let s = parseFloat(document.getElementById('doseMorning').value) || 0;
+        let t = parseFloat(document.getElementById('doseNoon').value) || 0;
+        let c = parseFloat(document.getElementById('doseAfternoon').value) || 0;
+        let toi = parseFloat(document.getElementById('doseEvening').value) || 0;
+
+        let total = days * (s + t + c + toi);
+        document.getElementById('medTotalQty').value = total;
+    }
+
+    function addMedicineToPrescription() {
+        let name = document.getElementById('searchMedicine').value.trim();
+        let totalQty = parseFloat(document.getElementById('medTotalQty').value) || 0;
+        if (!name || totalQty <= 0) { alert('Chọn thuốc và số lượng hợp lệ!'); return; }
+
+        let unitPrice = selectedMedObj ? selectedMedObj.price : 0;
+        let unit = selectedMedObj ? selectedMedObj.unit : 'Viên';
+        let activeIng = selectedMedObj && selectedMedObj.activeIng ? ` (${selectedMedObj.activeIng})` : '';
+
+        let item = {
+            tradeName: name + activeIng,
+            unit: unit,
+            morning: document.getElementById('doseMorning').value,
+            noon: document.getElementById('doseNoon').value,
+            afternoon: document.getElementById('doseAfternoon').value,
+            evening: document.getElementById('doseEvening').value,
+            days: document.getElementById('medDays').value,
+            qty: totalQty,
+            usageNote: document.getElementById('medUsageNote').value,
+            price: unitPrice,
+            totalPrice: totalQty * unitPrice,
+            stockId: selectedMedObj ? selectedMedObj.id : null
+        };
+
+        prescriptionMeds.push(item);
+        renderPrescriptionTable();
+
+        document.getElementById('searchMedicine').value = '';
+        selectedMedObj = null;
+    }
+
+    function renderPrescriptionTable() {
+        let tbody = document.getElementById('prescriptionTableBody');
+        tbody.innerHTML = '';
+        let medSum = 0;
+
+        prescriptionMeds.forEach((m, idx) => {
+            medSum += m.totalPrice;
+            tbody.innerHTML += `
+                <tr>
+                    <td><strong>${m.tradeName}</strong></td>
+                    <td>${m.unit}</td>
+                    <td>${m.morning}-${m.noon}-${m.afternoon}-${m.evening} (${m.days} ngày)</td>
+                    <td>${m.qty}</td>
+                    <td>${m.usageNote}</td>
+                    <td>${m.price.toLocaleString('vi-VN')} đ</td>
+                    <td>${m.totalPrice.toLocaleString('vi-VN')} đ</td>
+                    <td><button class="btn btn-danger" style="padding:2px 6px;" onclick="removePrescriptionMed(${idx})">X</button></td>
+                </tr>
+            `;
+        });
+
+        document.getElementById('totalMedPriceText').innerText = medSum.toLocaleString('vi-VN') + ' VNĐ';
+        calculateGrandTotal();
+    }
+
+    function removePrescriptionMed(idx) {
+        prescriptionMeds.splice(idx, 1);
+        renderPrescriptionTable();
+    }
+
+    function calculateGrandTotal() {
+        let medSum = prescriptionMeds.reduce((acc, cur) => acc + cur.totalPrice, 0);
+        let examFee = 50000;
+        let extraFee = document.getElementById('extraFeeCheck').checked ? 30000 : 0;
+        let grandTotal = examFee + medSum + extraFee;
+
+        document.getElementById('grandTotalText').innerText = grandTotal.toLocaleString('vi-VN') + ' VNĐ';
+        return { examFee, medSum, extraFee, grandTotal };
+    }
+
+    function completePrescription(printType) {
+        if (!currentPatient.name) { alert('Chưa có thông tin bệnh nhân!'); return; }
+
+        let totals = calculateGrandTotal();
+        let icdVal = document.getElementById('prescriptionICD').value;
+
+        prescriptionMeds.forEach(m => {
+            if (m.stockId) {
+                let st = stockData.find(s => s.id === m.stockId);
+                if (st) st.qty = Math.max(0, st.qty - m.qty);
+            }
+        });
+        localStorage.setItem('pk_stock', JSON.stringify(stockData));
+        renderStock();
+
+        let record = {
+            id: Date.now(),
+            date: new Date().toLocaleString('vi-VN'),
+            patient: currentPatient,
+            icd: icdVal,
+            meds: [...prescriptionMeds],
+            totals: totals
+        };
+        historyData.unshift(record);
+        localStorage.setItem('pk_history', JSON.stringify(historyData));
+        renderHistory();
+        updatePatientDatalist();
+
+        saveToDrive();
+
+        buildPrintHTML(record, printType);
+        window.print();
+    }
+
+    function buildPrintHTML(record, printType) {
+        let p = record.patient;
+        let html = '';
+
+        if (printType === 'prescription') {
+            let today = new Date();
+            let day = String(today.getDate()).padStart(2, '0');
+            let month = String(today.getMonth() + 1).padStart(2, '0');
+            let year = today.getFullYear();
+
+            let medsListHTML = record.meds.map((m, idx) => {
+                let doseParts = [];
+                if (parseFloat(m.morning) > 0) doseParts.push(`<i>Sáng: ${m.morning}</i>`);
+                if (parseFloat(m.noon) > 0) doseParts.push(`<i>Trưa: ${m.noon}</i>`);
+                if (parseFloat(m.afternoon) > 0) doseParts.push(`<i>Chiều: ${m.afternoon}</i>`);
+                if (parseFloat(m.evening) > 0) doseParts.push(`<i>Tối: ${m.evening}</i>`);
+
+                let doseStr = doseParts.join('&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;');
+                let routeStr = m.usageNote ? m.usageNote : 'Uống';
+
+                return `
+                    <div style="margin-bottom: 8px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 11pt;">
+                            <div>
+                                <span style="font-weight: normal; margin-right: 5px;">${idx + 1}.</span>
+                                <strong>${m.tradeName}</strong>
+                            </div>
+                            <div>
+                                <span>SL: ${m.qty} ${m.unit}</span>
+                            </div>
+                        </div>
+                        <div style="padding-left: 25px; font-size: 10.5pt; display: flex; gap: 40px; margin-top: 2px;">
+                            <span style="font-style: italic;">${routeStr}</span>
+                            <span>${doseStr}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            html = `
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;">
+                    <div>
+                        <div style="font-weight: bold; font-size: 10.5pt; text-transform: uppercase;">PHÒNG KHÁM ĐA KHOA BS. MINH</div>
+                        <div style="font-size: 9.5pt;">Phòng khám: Nội khoa - Đa khoa</div>
+                    </div>
+                    <div style="text-align: right; font-size: 8.5pt;">
+                        <div style="letter-spacing: 1px;">||||||||||||||||||||||||||||||||</div>
+                        <div>(${p.code})</div>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin: 10px 0 12px 0;">
+                    <div style="font-size: 16pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">ĐƠN THUỐC</div>
+                    <div style="font-style: italic; font-size: 11pt; font-weight: bold;">Dịch vụ</div>
+                </div>
+
+                <div style="font-size: 10.5pt; line-height: 1.5; margin-bottom: 12px;">
+                    <div style="display: flex;">
+                        <span style="width: 75px;">Họ và tên:</span>
+                        <strong style="text-transform: uppercase; font-size: 11pt; flex: 1;">${p.name}</strong>
+                        <span style="margin-right: 20px;">Tuổi: ${p.age}</span>
+                        <span>Giới tính: ${p.gender}</span>
+                    </div>
+                    <div>
+                        <span>Địa chỉ: ${p.address || ''}</span>
+                    </div>
+                    <div style="display: flex;">
+                        <span style="margin-right: 30px;">Đối tượng: Dịch vụ</span>
+                        <span>Số BHYT(nếu có): .....................................................</span>
+                    </div>
+                    <div>
+                        <span>Chẩn đoán: ${record.icd || 'Khám bệnh thông thường'}</span>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <div style="font-weight: bold; text-decoration: underline; margin-bottom: 4px; font-size: 11pt;">Chỉ định dùng thuốc:</div>
+                    <div style="font-weight: bold; margin-bottom: 6px; font-size: 10.5pt;">Thuốc</div>
+                    <div style="padding-left: 5px;">
+                        ${medsListHTML}
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 15px; font-size: 10.5pt;">
+                    <div style="font-weight: bold; text-transform: uppercase; margin-bottom: 3px;">LỜI DẶN:</div>
+                    <div>Hẹn tái khám sau khi hết thuốc hoặc có dấu hiệu bất thường.</div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; text-align: center; margin-top: 10px; font-size: 10.5pt;">
+                    <div style="width: 220px;">
+                        <div>Ngày ${day} tháng ${month} năm ${year}</div>
+                        <div style="font-weight: bold; margin-top: 2px;">Bác sĩ khám bệnh</div>
+                        <div style="font-style: italic; font-size: 9.5pt;">(Ký, ghi rõ họ tên)</div>
+                        <div style="height: 55px;"></div>
+                        <div style="font-weight: bold;">BS. Nguyễn Bảo Minh</div>
+                    </div>
+                </div>
+
+                <div style="position: absolute; bottom: 8mm; left: 12mm; right: 12mm; font-size: 8.5pt; font-style: italic; border-top: 0.5px solid #ccc; padding-top: 3px;">
+                    <div>Họ tên bố hoặc mẹ nếu người bệnh dưới 72 tháng tuổi: ..........................................................................................</div>
+                    <div>Khám lại xin mang theo đơn này</div>
+                </div>
+            `;
+        } else {
+            html = `
+                <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px;">
+                    <h2 style="font-size: 14pt; text-transform: uppercase;">PHÒNG KHÁM ĐA KHOA BS. MINH</h2>
+                    <p style="font-size: 9pt;">ĐC: 274, Quốc lộ 53, khóm Đa Cần, phường Hòa Thuận, tỉnh Vĩnh Long</p>
+                    <p style="font-size: 9pt;">BS Điều trị: Nguyễn Bảo Minh - ĐT/Zalo: 0977973104</p>
+                </div>
+                <div style="text-align: center; font-size: 15pt; font-weight: bold; margin: 15px 0; text-transform: uppercase;">BẢNG KÊ CHI PHÍ KHÁM BỆNH</div>
+                <p><strong>Bệnh nhân:</strong> ${p.name} - <strong>Tuổi:</strong> ${p.age}</p>
+                <p><strong>Ngày khám:</strong> ${record.date}</p>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 11pt;">
+                    <thead>
+                        <tr style="background: #f0f0f0;">
+                            <th style="border: 1px solid #000; padding: 6px;">Nội dung</th>
+                            <th style="border: 1px solid #000; padding: 6px; text-align: right;">Thành tiền (VNĐ)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td style="border: 1px solid #000; padding: 6px;">Tiền khám bệnh</td><td style="border: 1px solid #000; padding: 6px; text-align: right;">${record.totals.examFee.toLocaleString('vi-VN')} đ</td></tr>
+                        <tr><td style="border: 1px solid #000; padding: 6px;">Tổng tiền thuốc</td><td style="border: 1px solid #000; padding: 6px; text-align: right;">${record.totals.medSum.toLocaleString('vi-VN')} đ</td></tr>
+                        ${record.totals.extraFee > 0 ? `<tr><td style="border: 1px solid #000; padding: 6px;">Thủ thuật / Chi phí phát sinh</td><td style="border: 1px solid #000; padding: 6px; text-align: right;">${record.totals.extraFee.toLocaleString('vi-VN')} đ</td></tr>` : ''}
+                        <tr><th style="border: 1px solid #000; padding: 6px; text-align: left;">TỔNG CỘNG THANH TOÁN</th><th style="border: 1px solid #000; padding: 6px; text-align: right;">${record.totals.grandTotal.toLocaleString('vi-VN')} đ</th></tr>
+                    </tbody>
+                </table>
+                <div style="margin-top: 30px; display: flex; justify-content: space-between; text-align: center;">
+                    <div><p>Người lập bảng</p></div>
+                    <div>
+                        <p><em>Ngày ..... tháng ..... năm 20...</em></p>
+                        <p><strong>BÁC SĨ ĐIỀU TRỊ</strong></p>
+                        <br><br><br>
+                        <p><strong>BS. Nguyễn Bảo Minh</strong></p>
+                    </div>
+                </div>
+            `;
+        }
+        document.getElementById('printContent').innerHTML = html;
+    }
+
+    function renderHistory() {
+        let tbody = document.getElementById('historyTableBody');
+        let search = document.getElementById('historySearch').value.toLowerCase();
+        tbody.innerHTML = '';
+
+        let filtered = historyData.filter(item => 
+            item.patient.name.toLowerCase().includes(search) || 
+            item.patient.code.toLowerCase().includes(search) ||
+            item.date.includes(search)
+        );
+
+        filtered.forEach((item) => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${item.date}</td>
+                    <td>${item.patient.code}</td>
+                    <td><strong>${item.patient.name}</strong></td>
+                    <td>${item.patient.age}t / ${item.patient.gender}</td>
+                    <td>${item.icd || '-'}</td>
+                    <td>${item.totals.grandTotal.toLocaleString('vi-VN')} đ</td>
+                    <td>
+                        <button class="btn" style="padding:2px 6px; font-size:12px;" onclick="reprintHistory(${item.id}, 'prescription')">In Toa</button>
+                        <button class="btn btn-outline" style="padding:2px 6px; font-size:12px;" onclick="reprintHistory(${item.id}, 'bill')">In Bảng Kê</button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+
+    function reprintHistory(id, type) {
+        let record = historyData.find(item => item.id === id);
+        if (record) {
+            buildPrintHTML(record, type);
+            window.print();
+        }
+    }
+</script>
+</body>
+</html>
