@@ -119,6 +119,8 @@
         .btn:hover { background: var(--primary-hover); }
         .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
         .btn-outline:hover { background: var(--primary-light); }
+        .btn-success { background: #2e7d32; }
+        .btn-success:hover { background: #1b5e20; }
         .btn-danger { background: #e53935; }
         .btn-danger:hover { background: #c62828; }
 
@@ -129,7 +131,7 @@
 
         .print-area { display: none; }
 
-        /* --- SỬA CẤU HÌNH IN ĐỂ TRÁNH TRÀN KHU VỰC VÀ CHÈN KHỐI --- */
+        /* --- CSS CHO BẢN IN A5 --- */
         @media print {
             @page {
                 size: A5 portrait;
@@ -171,6 +173,23 @@
             #printArea div, #printArea p, #printArea span, #printArea table, #printArea tbody, #printArea tr, #printArea td, #printArea th {
                 display: revert !important;
             }
+
+            #printArea .med-header {
+                display: flex !important;
+                justify-content: space-between !important;
+                align-items: baseline !important;
+            }
+
+            #printArea .med-dose-row {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+                gap: 15px !important;
+                padding-left: 20px !important;
+                font-size: 9.5pt !important;
+                margin-top: 2px !important;
+            }
+
             #printArea .flex-row {
                 display: flex !important;
             }
@@ -322,9 +341,11 @@
                     TỔNG CỘNG THANH TOÁN: <span id="grandTotalText">50.000 VNĐ</span>
                 </div>
             </div>
-            <div style="margin-top: 15px; display: flex; gap: 10px;">
+            <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
                 <button class="btn" onclick="completePrescription('prescription')">🖨️ In Đơn Thuốc (A5)</button>
                 <button class="btn btn-outline" onclick="completePrescription('bill')">🧾 In Bảng Kê Chi Phí</button>
+                <!-- NÚT MỚI: HOÀN TẤT KHÁM -->
+                <button class="btn btn-success" onclick="finishExaminationOnly()">✅ Hoàn Tất Khám (Không In)</button>
             </div>
         </div>
     </div>
@@ -658,6 +679,30 @@
         showTab('ke-don');
     }
 
+    function resetCurrentPatientForm() {
+        currentPatient = {};
+        prescriptionMeds = [];
+        document.getElementById('patientCode').value = '';
+        document.getElementById('patientName').value = '';
+        document.getElementById('patientAge').value = '';
+        document.getElementById('patientGender').value = 'Nam';
+        document.getElementById('patientAddress').value = '';
+        document.getElementById('vitalBP').value = '';
+        document.getElementById('vitalPulse').value = '';
+        document.getElementById('vitalTemp').value = '';
+        document.getElementById('vitalResp').value = '';
+        document.getElementById('vitalWeight').value = '';
+        document.getElementById('vitalHeight').value = '';
+        document.getElementById('clinicalSymptoms').value = '';
+        document.getElementById('clsResults').value = '';
+        document.getElementById('prescriptionICD').value = '';
+        document.getElementById('searchMedicine').value = '';
+        document.getElementById('extraFeeCheck').checked = false;
+        
+        document.getElementById('currentPatientBrief').innerText = 'Chưa chọn bệnh nhân. Vui lòng nhập ở tab "Nhận Bệnh".';
+        renderPrescriptionTable();
+    }
+
     function saveMedicineToStock() {
         let tradeName = document.getElementById('stockTradeName').value.trim();
         if (!tradeName) { alert('Vui lòng nhập tên thương mại của thuốc!'); return; }
@@ -854,9 +899,8 @@
         return { examFee, medSum, extraFee, grandTotal };
     }
 
-    function completePrescription(printType) {
-        if (!currentPatient.name) { alert('Chưa có thông tin bệnh nhân!'); return; }
-
+    // TÍNH NĂNG 1: THỰC HIỆN LƯU VÀ HOÀN TẤT BỆNH NHÂN (DÙNG CHUNG)
+    function savePrescriptionRecord() {
         let totals = calculateGrandTotal();
         let icdVal = document.getElementById('prescriptionICD').value;
 
@@ -883,11 +927,60 @@
         updatePatientDatalist();
 
         saveToDrive();
+        return record;
+    }
 
+    function completePrescription(printType) {
+        if (!currentPatient.name) { alert('Chưa có thông tin bệnh nhân!'); return; }
+
+        let record = savePrescriptionRecord();
         buildPrintHTML(record, printType);
         setTimeout(() => {
             window.print();
         }, 100);
+    }
+
+    // NÚT MỚI: HOÀN TẤT KHÁM MÀ KHÔNG BẬT LỆNH IN
+    function finishExaminationOnly() {
+        if (!currentPatient.name) { alert('Chưa có thông tin bệnh nhân!'); return; }
+
+        savePrescriptionRecord();
+        alert('Đã hoàn tất khám và lưu hồ sơ thành công!');
+        resetCurrentPatientForm();
+        showTab('nhan-benh');
+    }
+
+    // TÍNH NĂNG 2: XÓA TOA THUỐC TRONG LỊCH SỬ
+    function deletePrescriptionRecord(id) {
+        let index = historyData.findIndex(item => item.id === id);
+        if (index === -1) return;
+
+        let record = historyData[index];
+        let restoreStock = confirm(`Bạn có chắc muốn xóa toa thuốc của bệnh nhân "${record.patient.name}"?\n\n- Bấm OK để XÓA VÀ HOÀN LẠI THUỐC VÀO KHO.\n- Bấm Cancel nếu muốn HỦY thao tác.`);
+        
+        if (restoreStock) {
+            // Hoàn trả số lượng thuốc lại cho Kho
+            if (record.meds && record.meds.length > 0) {
+                record.meds.forEach(m => {
+                    if (m.stockId) {
+                        let st = stockData.find(s => s.id === m.stockId);
+                        if (st) {
+                            st.qty += m.qty;
+                        }
+                    }
+                });
+                localStorage.setItem('pk_stock', JSON.stringify(stockData));
+                renderStock();
+            }
+
+            // Xóa bản ghi lịch sử
+            historyData.splice(index, 1);
+            localStorage.setItem('pk_history', JSON.stringify(historyData));
+            renderHistory();
+            updatePatientDatalist();
+            saveToDrive();
+            alert('Đã xóa toa thuốc và hoàn trả lại kho!');
+        }
     }
 
     function buildPrintHTML(record, printType) {
@@ -902,27 +995,28 @@
 
             let medsListHTML = record.meds.map((m, idx) => {
                 let doseParts = [];
-                if (parseFloat(m.morning) > 0) doseParts.push(`<i>Sáng: ${m.morning}</i>`);
-                if (parseFloat(m.noon) > 0) doseParts.push(`<i>Trưa: ${m.noon}</i>`);
-                if (parseFloat(m.afternoon) > 0) doseParts.push(`<i>Chiều: ${m.afternoon}</i>`);
-                if (parseFloat(m.evening) > 0) doseParts.push(`<i>Tối: ${m.evening}</i>`);
+                let u = m.unit ? m.unit : '';
+                if (parseFloat(m.morning) > 0) doseParts.push(`<i>Sáng: ${m.morning} ${u}</i>`);
+                if (parseFloat(m.noon) > 0) doseParts.push(`<i>Trưa: ${m.noon} ${u}</i>`);
+                if (parseFloat(m.afternoon) > 0) doseParts.push(`<i>Chiều: ${m.afternoon} ${u}</i>`);
+                if (parseFloat(m.evening) > 0) doseParts.push(`<i>Tối: ${m.evening} ${u}</i>`);
 
                 let doseStr = doseParts.join('&nbsp;&nbsp;&nbsp;&nbsp;');
-                let routeStr = m.usageNote ? m.usageNote : 'Uống';
+                let routeStr = m.usageNote ? `<i>${m.usageNote}</i>` : '<i>Uống</i>';
 
                 return `
                     <div style="margin-bottom: 6px;">
-                        <div class="flex-row" style="justify-content: space-between; font-size: 10.5pt;">
+                        <div class="med-header" style="font-size: 10.5pt;">
                             <div>
-                                <span>${idx + 1}.</span>
+                                <span style="font-weight: bold; margin-right: 4px;">${idx + 1}.</span>
                                 <strong>${m.tradeName}</strong>
                             </div>
                             <div>
                                 <span>SL: ${m.qty} ${m.unit}</span>
                             </div>
                         </div>
-                        <div class="flex-row" style="padding-left: 15px; font-size: 9.5pt; gap: 20px; margin-top: 1px;">
-                            <span style="font-style: italic;">${routeStr}</span>
+                        <div class="med-dose-row">
+                            <span>${routeStr}</span>
                             <span>${doseStr}</span>
                         </div>
                     </div>
@@ -961,7 +1055,7 @@
                 </div>
 
                 <div style="margin-bottom: 8px;">
-                    <div style="font-weight: bold; text-decoration: underline; margin-bottom: 2px; font-size: 10pt;">Chỉ định dùng thuốc:</div>
+                    <div style="font-weight: bold; text-decoration: underline; margin-bottom: 4px; font-size: 10pt;">Chỉ định dùng thuốc:</div>
                     <div style="padding-left: 2px;">
                         ${medsListHTML}
                     </div>
@@ -982,7 +1076,6 @@
                     </div>
                 </div>
 
-                <!-- CHUYỂN THÀNH KHỐI NỘI DUNG TĨNH ĐỂ KHÔNG BỊ CHÈN CHỮ KÝ -->
                 <div style="font-size: 8pt; font-style: italic; border-top: 0.5px solid #ccc; padding-top: 4px; margin-top: 10px;">
                     <div>Họ tên bố hoặc mẹ nếu người bệnh dưới 72 tháng tuổi: ..........................................................................................</div>
                     <div>Khám lại xin mang theo đơn này</div>
@@ -996,8 +1089,20 @@
                     <p style="font-size: 8.5pt;">BS Điều trị: Nguyễn Bảo Minh - ĐT/Zalo: 0977973104</p>
                 </div>
                 <div style="text-align: center; font-size: 13pt; font-weight: bold; margin: 10px 0; text-transform: uppercase;">BẢNG KÊ CHI PHÍ KHÁM BỆNH</div>
-                <p><strong>Bệnh nhân:</strong> ${p.name} - <strong>Tuổi:</strong> ${p.age}</p>
-                <p><strong>Ngày khám:</strong> ${record.date}</p>
+                
+                <div style="font-size: 10pt; line-height: 1.4; margin-bottom: 10px;">
+                    <div class="flex-row" style="justify-content: space-between;">
+                        <span>Họ và tên: <strong style="text-transform: uppercase;">${p.name}</strong></span>
+                        <span>Tuổi: ${p.age}</span>
+                    </div>
+                    <div>
+                        <span>Địa chỉ: ${p.address || ''}</span>
+                    </div>
+                    <div>
+                        <span>Ngày khám: ${record.date}</span>
+                    </div>
+                </div>
+
                 <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 10pt;">
                     <thead>
                         <tr style="background: #f0f0f0;">
@@ -1049,6 +1154,7 @@
                     <td>
                         <button class="btn" style="padding:2px 6px; font-size:12px;" onclick="reprintHistory(${item.id}, 'prescription')">In Toa</button>
                         <button class="btn btn-outline" style="padding:2px 6px; font-size:12px;" onclick="reprintHistory(${item.id}, 'bill')">In Bảng Kê</button>
+                        <button class="btn btn-danger" style="padding:2px 6px; font-size:12px;" onclick="deletePrescriptionRecord(${item.id})">Xóa Toa</button>
                     </td>
                 </tr>
             `;
