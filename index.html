@@ -129,6 +129,25 @@
         .btn-danger:hover { background: #c62828; }
         .btn-sm { padding: 3px 8px; font-size: 12px; }
 
+        .cls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .cls-item {
+            background: #fdf0f5;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13.5px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13.5px; }
         th, td { border: 1px solid #f0f0f0; padding: 9px 10px; text-align: left; }
         th { background: var(--primary-light); color: var(--primary); font-weight: 700; }
@@ -262,9 +281,10 @@
     <button class="active" onclick="showTab('nhan-benh')">1. Nhận Bệnh</button>
     <button onclick="showTab('cho-kham')">2. Chờ Khám (<span id="waitingCount">0</span>)</button>
     <button onclick="showTab('ke-don')">3. Kê Đơn & In Đơn</button>
-    <button onclick="showTab('kho-thuoc')">4. Kho Thuốc</button>
-    <button onclick="showTab('ma-icd')">5. Danh Mục ICD</button>
-    <button onclick="showTab('lich-su')">6. Lịch Sử Khám</button>
+    <button onclick="showTab('chi-dinh-cls')">4. Chỉ Định CLS</button>
+    <button onclick="showTab('kho-thuoc')">5. Kho Thuốc</button>
+    <button onclick="showTab('ma-icd')">6. Danh Mục ICD</button>
+    <button onclick="showTab('lich-su')">7. Lịch Sử Khám</button>
 </nav>
 
 <div class="container">
@@ -366,7 +386,6 @@
             </div>
         </div>
 
-        <!-- KHU VỰC SỬ DỤNG TOA CŨ (ĐÃ SỬA GIAO DIỆN HIỂN THỊ NÚT BẤM) -->
         <div class="card" id="oldPrescriptionSection" style="display: none; background: #eefbe7; border-color: #c8e6c9;">
             <div class="card-title" style="color: #2e7d32; border-bottom-color: #a5d6a7;">📋 SỬ DỤNG TOA THUỐC CŨ CỦA BỆNH NHÂN NÀY</div>
             <div style="display: flex; flex-direction: column; gap: 10px;">
@@ -464,7 +483,39 @@
         </div>
     </div>
 
-    <!-- TAB 4: KHO THUỐC -->
+    <!-- TAB 4: CHỈ ĐỊNH CẬN LÂM SÀNG (MỚI) -->
+    <div id="chi-dinh-cls" class="tab-content">
+        <div class="card">
+            <div class="card-title">CHỈ ĐỊNH CẬN LÂM SÀNG (CLS)</div>
+            <div id="clsPatientBrief" style="font-size: 14px; font-weight: bold; color: var(--primary); margin-bottom: 15px;">
+                Chưa chọn bệnh nhân. Vui lòng chọn ở tab "Chờ Khám".
+            </div>
+
+            <div style="font-weight: bold; margin-bottom: 10px; color: #555;">Chọn nhanh dịch vụ Cận Lâm Sàng:</div>
+            <div class="cls-grid">
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Công thức máu toàn bộ (CBC)"> Công thức máu (CBC)</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Sinh hóa máu (Đường, Gan, Thận)"> Sinh hóa máu cơ bản</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Siêu âm bụng tổng quát"> Siêu âm bụng tổng quát</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Siêu âm Tim / Mạch máu"> Siêu âm Tim</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="X-Quang Ngực thẳng"> X-Quang Ngực thẳng</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="X-Quang Cột sống / Xương khớp"> X-Quang Cột sống / Xương</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Điện tâm đồ (ECG)"> Điện tâm đồ (ECG)</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Tổng phân tích nước tiểu 10 thông số"> Tổng phân tích nước tiểu</label>
+            </div>
+
+            <div class="form-group full" style="margin-top: 10px;">
+                <label>Chỉ định khác / Yêu cầu cụ thể:</label>
+                <textarea id="clsCustomNote" rows="3" placeholder="Nhập thêm chỉ định hoặc chi tiết cận lâm sàng khác..."></textarea>
+            </div>
+
+            <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-outline" type="button" onclick="saveClsNoteToPatient()">✅ Lưu Chỉ Định Vào Bệnh Án</button>
+                <button class="btn" type="button" onclick="printClsSheet()">🖨️ In Giấy Chỉ Định CLS (A5)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 5: KHO THUỐC -->
     <div id="kho-thuoc" class="tab-content">
         <div class="card">
             <div class="card-title">THÊM / CẬP NHẬT THUỐC VÀO KHO</div>
@@ -504,7 +555,7 @@
         </div>
     </div>
 
-    <!-- TAB 5: DANH MỤC ICD -->
+    <!-- TAB 6: DANH MỤC ICD -->
     <div id="ma-icd" class="tab-content">
         <div class="card">
             <div class="card-title">THÊM MÃ ICD & TÊN BỆNH</div>
@@ -530,7 +581,7 @@
         </div>
     </div>
 
-    <!-- TAB 6: LỊCH SỬ KHÁM -->
+    <!-- TAB 7: LỊCH SỬ KHÁM -->
     <div id="lich-su" class="tab-content">
         <div class="card">
             <div class="card-title">LỊCH SỬ KHÁM BỆNH</div>
@@ -976,13 +1027,104 @@
             currentPatient = {...p};
             let ageText = currentPatient.age ? `${currentPatient.age} ${currentPatient.ageUnit || 'tuổi'}` : '';
             
-            document.getElementById('currentPatientBrief').innerText = 
-                `[Mã: ${currentPatient.code}] ${currentPatient.name} - ${ageText} - ${currentPatient.gender} - ĐC: ${currentPatient.address}`;
+            let briefText = `[Mã: ${currentPatient.code}] ${currentPatient.name} - ${ageText} - ${currentPatient.gender} - ĐC: ${currentPatient.address}`;
+            document.getElementById('currentPatientBrief').innerText = briefText;
+            document.getElementById('clsPatientBrief').innerText = briefText;
             
             setupOldPrescriptionDropdown();
 
             showTab('ke-don');
         }
+    }
+
+    // XỬ LÝ LƯU VÀ IN CHỈ ĐỊNH CẬN LÂM SÀNG (CLS)
+    function getSelectedClsList() {
+        let selectedList = [];
+        document.querySelectorAll('.cls-checkbox:checked').forEach(cb => {
+            selectedList.push(cb.value);
+        });
+        let customNote = document.getElementById('clsCustomNote').value.trim();
+        if (customNote) {
+            selectedList.push(customNote);
+        }
+        return selectedList;
+    }
+
+    function saveClsNoteToPatient() {
+        if (!currentPatient.name) { alert('Chưa chọn bệnh nhân khám!'); return; }
+        
+        let clsList = getSelectedClsList();
+        if (clsList.length === 0) { alert('Chưa chọn hoặc nhập chỉ định Cận lâm sàng nào!'); return; }
+
+        currentPatient.cls = clsList.join('; ');
+        alert('Đã lưu chỉ định Cận lâm sàng vào bệnh án thành công!');
+    }
+
+    function printClsSheet() {
+        if (!currentPatient.name) { alert('Chưa chọn bệnh nhân khám!'); return; }
+
+        let clsList = getSelectedClsList();
+        if (clsList.length === 0) { alert('Chưa chọn dịch vụ cận lâm sàng nào để in!'); return; }
+
+        let today = new Date();
+        let day = String(today.getDate()).padStart(2, '0');
+        let month = String(today.getMonth() + 1).padStart(2, '0');
+        let year = today.getFullYear();
+        let ageDisplay = currentPatient.age ? `${currentPatient.age} ${currentPatient.ageUnit || 'tuổi'}` : '';
+
+        let clsItemsHtml = clsList.map((item, idx) => `
+            <tr>
+                <td style="border: 1px solid #000; padding: 6px; text-align: center;">${idx + 1}</td>
+                <td style="border: 1px solid #000; padding: 6px;"><strong>${item}</strong></td>
+            </tr>
+        `).join('');
+
+        let icdVal = document.getElementById('prescriptionICD').value || 'Khám bệnh thông thường';
+
+        let html = `
+            <div style="text-align: center; border-bottom: 1.5px solid #000; padding-bottom: 4px; margin-bottom: 8px;">
+                <h2 style="font-size: 12pt; text-transform: uppercase;">PHÒNG KHÁM ĐA KHOA BS. MINH</h2>
+                <p style="font-size: 8.5pt;">ĐC: 274, Quốc lộ 53, khóm Đa Cần, phường Hòa Thuận, tỉnh Vĩnh Long</p>
+                <p style="font-size: 8.5pt;">BS Điều trị: Nguyễn Bảo Minh - ĐT/Zalo: 0977973104</p>
+            </div>
+
+            <div style="text-align: center; font-size: 13pt; font-weight: bold; margin: 10px 0; text-transform: uppercase;">GIẤY CHỈ ĐỊNH CẬN LÂM SÀNG</div>
+
+            <div style="font-size: 10pt; line-height: 1.4; margin-bottom: 10px;">
+                <div class="flex-row" style="justify-content: space-between; align-items: baseline;">
+                    <div>Họ và tên: <strong style="text-transform: uppercase; font-size: 10.5pt;">${currentPatient.name}</strong></div>
+                    <div>Tuổi: ${ageDisplay} - Giới tính: ${currentPatient.gender}</div>
+                </div>
+                <div>Địa chỉ: ${currentPatient.address || ''}</div>
+                <div>Chẩn đoán sơ bộ: ${icdVal}</div>
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 10pt;">
+                <thead>
+                    <tr style="background: #f0f0f0;">
+                        <th style="border: 1px solid #000; padding: 6px; width: 40px; text-align: center;">STT</th>
+                        <th style="border: 1px solid #000; padding: 6px; text-align: left;">Dịch vụ cận lâm sàng chỉ định</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${clsItemsHtml}
+                </tbody>
+            </table>
+
+            <div class="flex-row" style="margin-top: 25px; justify-content: flex-end; text-align: center; font-size: 10pt;">
+                <div style="width: 220px;">
+                    <p><em>Ngày ${day} tháng ${month} năm ${year}</em></p>
+                    <p><strong>BÁC SĨ CHỈ ĐỊNH</strong></p>
+                    <div style="height: 55px;"></div>
+                    <p><strong>BS. Nguyễn Bảo Minh</strong></p>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('printContent').innerHTML = html;
+        setTimeout(() => {
+            window.print();
+        }, 100);
     }
 
     function setupOldPrescriptionDropdown() {
@@ -1014,7 +1156,6 @@
         }
     }
 
-    // ĐÃ NÂNG CẤP TÍNH NĂNG CẢNH BÁO VÀ LỌC THUỐC HẾT / KHÔNG CÓ TRONG KHO
     function loadSelectedOldPrescription() {
         let selectEl = document.getElementById('oldPrescriptionSelect');
         if (!selectEl || !selectEl.value) {
@@ -1030,10 +1171,8 @@
             let unavailableMeds = [];
 
             record.meds.forEach(m => {
-                // Lấy tên gốc của thuốc (bỏ phần hoạt chất trong ngoặc nếu có)
                 let baseName = m.tradeName.split(' (')[0].trim();
                 
-                // Tìm kiếm trong Kho thuốc hiện tại
                 let stockItem = stockData.find(s => 
                     s.tradeName.trim().toLowerCase() === baseName.toLowerCase() || 
                     s.tradeName.trim().toLowerCase() === m.tradeName.trim().toLowerCase()
@@ -1044,7 +1183,6 @@
                 } else if (stockItem.qty <= 0) {
                     unavailableMeds.push(`${m.tradeName} ➔ (Đã hết hàng trong kho - Tồn: 0)`);
                 } else {
-                    // Nếu thuốc có và còn hàng, nạp vào toa và cập nhật đơn giá theo kho mới nhất
                     let updatedItem = JSON.parse(JSON.stringify(m));
                     updatedItem.price = stockItem.price;
                     updatedItem.totalPrice = updatedItem.qty * stockItem.price;
@@ -1053,18 +1191,13 @@
                 }
             });
 
-            // Nạp chẩn đoán ICD cũ
             document.getElementById('prescriptionICD').value = record.icd || '';
-            
-            // Cập nhật danh sách thuốc kê đơn
             prescriptionMeds = loadedMeds;
             renderPrescriptionTable();
 
-            // Tự động bỏ chọn tiền khám 50.000đ khi dùng toa cũ
             document.getElementById('includeExamFeeCheck').checked = false;
             calculateGrandTotal();
 
-            // Thông báo báo lỗi/cảnh báo thuốc nếu có thuốc hết
             if (unavailableMeds.length > 0) {
                 let msg = `⚠️ THÔNG BÁO THUỐC TRONG KHO:\n\n`;
                 msg += `Các thuốc sau trong toa cũ KHÔNG ĐƯỢC THÊM VÀO TOA do hết hoặc không có trong kho:\n\n`;
@@ -1136,8 +1269,11 @@
         document.getElementById('includeExamFeeCheck').checked = true;
         document.getElementById('extraFeeCheck').checked = false;
         document.getElementById('oldPrescriptionSection').style.display = 'none';
+        document.querySelectorAll('.cls-checkbox').forEach(cb => cb.checked = false);
+        document.getElementById('clsCustomNote').value = '';
         
         document.getElementById('currentPatientBrief').innerText = 'Chưa chọn bệnh nhân. Vui lòng chọn ở tab "Chờ Khám".';
+        document.getElementById('clsPatientBrief').innerText = 'Chưa chọn bệnh nhân. Vui lòng chọn ở tab "Chờ Khám".';
         renderPrescriptionTable();
     }
 
