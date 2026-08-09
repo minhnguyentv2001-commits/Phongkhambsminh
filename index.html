@@ -273,6 +273,17 @@
             #printArea .flex-row {
                 display: flex !important;
             }
+
+            #printArea table.cls-table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                table-layout: fixed !important;
+            }
+            #printArea table.cls-table th, #printArea table.cls-table td {
+                border: 1px solid #000 !important;
+                padding: 5px 8px !important;
+                box-sizing: border-box !important;
+            }
         }
     </style>
 </head>
@@ -500,7 +511,7 @@
         </div>
     </div>
 
-    <!-- TAB 4: CHỈ ĐỊNH CẬN LÂM SÀNG (ĐÃ CẬP NHẬT DANH MỤC XÉT NGHIỆM MỚI) -->
+    <!-- TAB 4: CHỈ ĐỊNH CẬN LÂM SÀNG -->
     <div id="chi-dinh-cls" class="tab-content">
         <div class="card">
             <div class="card-title">CHỈ ĐỊNH CẬN LÂM SÀNG (CLS)</div>
@@ -1130,6 +1141,9 @@
         let clsList = getSelectedClsList();
         if (clsList.length === 0) { alert('Chưa chọn dịch vụ cận lâm sàng nào để in!'); return; }
 
+        // Tự động lưu chỉ định CLS vào bệnh án trước khi in
+        currentPatient.cls = clsList.join('; ');
+
         let today = new Date();
         let day = String(today.getDate()).padStart(2, '0');
         let month = String(today.getMonth() + 1).padStart(2, '0');
@@ -1138,8 +1152,8 @@
 
         let clsItemsHtml = clsList.map((item, idx) => `
             <tr>
-                <td style="border: 1px solid #000; padding: 6px; text-align: center;">${idx + 1}</td>
-                <td style="border: 1px solid #000; padding: 6px;"><strong>${item}</strong></td>
+                <td style="border: 1px solid #000; padding: 5px; text-align: center; font-size: 10pt;">${idx + 1}</td>
+                <td style="border: 1px solid #000; padding: 5px 8px; font-size: 10pt;"><strong>${item}</strong></td>
             </tr>
         `).join('');
 
@@ -1163,11 +1177,11 @@
                 <div>Chẩn đoán sơ bộ: ${icdVal}</div>
             </div>
 
-            <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 10pt;">
+            <table class="cls-table">
                 <thead>
                     <tr style="background: #f0f0f0;">
-                        <th style="border: 1px solid #000; padding: 6px; width: 40px; text-align: center;">STT</th>
-                        <th style="border: 1px solid #000; padding: 6px; text-align: left;">Dịch vụ cận lâm sàng chỉ định</th>
+                        <th style="border: 1px solid #000; padding: 5px; width: 40px; text-align: center; font-size: 10pt;">STT</th>
+                        <th style="border: 1px solid #000; padding: 5px 8px; text-align: center; font-size: 10pt;">Dịch vụ cận lâm sàng chỉ định</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1530,7 +1544,7 @@
                     <td>${m.usageNote}</td>
                     <td>${m.price.toLocaleString('vi-VN')} đ</td>
                     <td>${m.totalPrice.toLocaleString('vi-VN')} đ</td>
-                    <td><button class="btn btn-danger btn-sm" onclick="removePrescriptionMed(${idx})">X xóa</button></td>
+                    <td><button class="btn btn-danger btn-sm" onclick="removePrescriptionMed(${idx})">Xóa</button></td>
                 </tr>
             `;
         });
@@ -1554,6 +1568,7 @@
         return { examFee, medSum, extraFee, grandTotal };
     }
 
+    // TỰ ĐỘNG LƯU CẢ DỮ LIỆU CẬN LÂM SÀNG VÀO HỒ SƠ LỊCH SỬ
     function savePrescriptionRecord() {
         let totals = calculateGrandTotal();
         let icdVal = document.getElementById('prescriptionICD').value;
@@ -1567,6 +1582,12 @@
         });
         localStorage.setItem('pk_stock', JSON.stringify(stockData));
         renderStock();
+
+        // Lấy danh sách chỉ định CLS nếu có
+        let clsList = getSelectedClsList();
+        if (clsList.length > 0) {
+            currentPatient.cls = clsList.join('; ');
+        }
 
         let record = {
             id: Date.now(),
@@ -1840,6 +1861,7 @@
         });
     }
 
+    // HIỂN THỊ CHI TIẾT LỊCH SỬ KHÁM BAO GỒM CẢ CẬN LÂM SÀNG
     function viewHistoryDetail(id) {
         let record = historyData.find(item => item.id === id);
         if (!record) return;
@@ -1866,7 +1888,7 @@
             <hr style="margin: 10px 0;">
             <p style="color: var(--primary); font-weight: bold;">LÂM SÀNG & CẬN LÂM SÀNG:</p>
             <p><strong>Triệu chứng lâm sàng:</strong> ${p.symptoms || 'Không ghi nhận'}</p>
-            <p><strong>Kết quả CLS:</strong> ${p.cls || 'Không có'}</p>
+            <p><strong>Chỉ định Cận lâm sàng (CLS):</strong> ${p.cls || 'Không có chỉ định'}</p>
             <hr style="margin: 10px 0;">
             <p style="color: var(--primary); font-weight: bold;">DANH SÁCH THUỐC ĐÃ KÊ:</p>
             <ol style="padding-left: 20px;">${medsHtml}</ol>
