@@ -17,9 +17,9 @@
             --text: #333333;
             --card-bg: #ffffff;
             --border: #f8bbd0;
-            --revisit-bg: #e8f5e9; /* Xanh Pastel cho BN Tái Khám */
+            --revisit-bg: #e8f5e9;
             --revisit-border: #a5d6a7;
-            --priority-bg: #fff9c4; /* Vàng Pastel cho BN Ưu Tiên */
+            --priority-bg: #fff9c4;
             --priority-border: #fff59d;
         }
 
@@ -134,7 +134,6 @@
         th { background: var(--primary-light); color: var(--primary); font-weight: 700; }
         tr:nth-child(even) { background: #fffcfd; }
 
-        /* KHỐI HÀNG CHỜ KHÁM */
         .waiting-card {
             background: #ffffff;
             border: 1px solid var(--border);
@@ -146,12 +145,10 @@
             align-items: center;
             transition: all 0.2s;
         }
-        /* MÀU XANH PASTEL CHO BN TÁI KHÁM */
         .waiting-card.is-revisit {
             background-color: var(--revisit-bg) !important;
             border-color: var(--revisit-border) !important;
         }
-        /* MÀU VÀNG PASTEL CHO BN ƯU TIÊN */
         .waiting-card.is-priority {
             background-color: var(--priority-bg) !important;
             border-color: var(--priority-border) !important;
@@ -286,9 +283,16 @@
                     <input type="text" id="patientName" list="oldPatientNames" placeholder="Tên bệnh nhân..." onchange="autofillPatientByName(this.value)">
                     <datalist id="oldPatientNames"></datalist>
                 </div>
+                <!-- CẢI TIẾN: CHO PHÉP CHỌN ĐƠN VỊ TUỔI / THÁNG TRẺ EM -->
                 <div class="form-group">
-                    <label>Tuổi:</label>
-                    <input type="number" id="patientAge" placeholder="Tuổi">
+                    <label>Tuổi / Tháng tuổi:</label>
+                    <div style="display: flex; gap: 5px;">
+                        <input type="number" id="patientAge" placeholder="Tuổi" style="flex: 1;">
+                        <select id="patientAgeUnit" style="width: 85px;">
+                            <option value="tuổi">Tuổi</option>
+                            <option value="tháng">Tháng</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Giới tính:</label>
@@ -305,7 +309,6 @@
                     <label>Họ tên Người thân (nếu có):</label>
                     <input type="text" id="patientGuardian" placeholder="Nhập tên người thân...">
                 </div>
-                <!-- BỔ SUNG Ô TICK ĐỐI TƯỢNG ƯU TIÊN -->
                 <div class="form-group full" style="margin-top: 5px;">
                     <label style="cursor: pointer; display: flex; align-items: center; gap: 8px; color: #d32f2f; font-weight: bold;">
                         <input type="checkbox" id="patientPriority" style="width: 18px; height: 18px; cursor: pointer;">
@@ -357,6 +360,20 @@
             <div class="card-title">BỆNH NHÂN HIỆN TẠI</div>
             <div id="currentPatientBrief" style="font-size: 14px; font-weight: bold; color: var(--primary);">
                 Chưa chọn bệnh nhân. Vui lòng chọn ở tab "Chờ Khám".
+            </div>
+        </div>
+
+        <!-- TÍNH NĂNG MỚI: CHỌN SỬ DỤNG TOA THUỐC CŨ -->
+        <div class="card" id="oldPrescriptionSection" style="display: none; background: #eefbe7; border-color: #c8e6c9;">
+            <div class="card-title" style="color: #2e7d32; border-bottom-color: #a5d6a7;">📋 SỬ DỤNG TOA THUỐC CŨ CỦA BỆNH NHÂN NÀY</div>
+            <div class="form-grid">
+                <div class="form-group full">
+                    <label>Chọn lượt khám cũ để nạp lại đơn thuốc:</label>
+                    <div style="display: flex; gap: 10px;">
+                        <select id="oldPrescriptionSelect" style="flex: 1;"></select>
+                        <button class="btn btn-success" onclick="loadSelectedOldPrescription()">📋 Dùng Toa Cũ Này</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -421,7 +438,13 @@
         <div class="card">
             <div class="card-title">THANH TOÁN & HOÀN TẤT</div>
             <div style="font-size: 15px; line-height: 1.8;">
-                <div>Tiền khám bệnh mặc định: <strong>50.000 VNĐ</strong></div>
+                <!-- TÍNH NĂNG MỚI: CHO PHÉP CÓ TÍNH TIỀN KHÁM HAY KHÔNG -->
+                <div>
+                    <label style="cursor: pointer; font-weight: bold;">
+                        <input type="checkbox" id="includeExamFeeCheck" checked onchange="calculateGrandTotal()">
+                        Tính tiền khám bệnh (50.000 VNĐ)
+                    </label>
+                </div>
                 <div>Tổng tiền thuốc: <strong id="totalMedPriceText">0 VNĐ</strong></div>
                 <div>
                     <label style="cursor: pointer;">
@@ -759,10 +782,29 @@
         });
     }
 
-    function fillPatientFields(p) {
+    // TÍNH NĂNG MỚI: TỰ ĐỘNG TÍNH LẠI TUỔI KHI BƯỚC SANG NĂM MỚI
+    function calculateUpdatedAge(p, recordYear) {
+        if (!p.age) return '';
+        let currentYear = new Date().getFullYear();
+        let unit = p.ageUnit || 'tuổi';
+
+        // Chỉ tính cộng tuổi nếu đơn vị là 'tuổi' và năm khám trước nhỏ hơn năm hiện tại
+        if (unit === 'tuổi' && recordYear && currentYear > recordYear) {
+            let diffYear = currentYear - recordYear;
+            return parseInt(p.age) + diffYear;
+        }
+        return p.age;
+    }
+
+    function fillPatientFields(p, recordYear) {
         document.getElementById('patientCode').value = p.code || '';
         document.getElementById('patientName').value = p.name || '';
-        document.getElementById('patientAge').value = p.age || '';
+        
+        // Cập nhật số tuổi mới nhất
+        let calculatedAge = calculateUpdatedAge(p, recordYear);
+        document.getElementById('patientAge').value = calculatedAge;
+        document.getElementById('patientAgeUnit').value = p.ageUnit || 'tuổi';
+
         document.getElementById('patientGender').value = p.gender || 'Nam';
         document.getElementById('patientAddress').value = p.address || '';
         document.getElementById('patientGuardian').value = p.guardian || '';
@@ -770,12 +812,18 @@
 
     function autofillPatientByCode(code) {
         let match = historyData.find(item => item.patient.code === code);
-        if (match) fillPatientFields(match.patient);
+        if (match) {
+            let recordYear = match.recordYear || new Date(match.id).getFullYear();
+            fillPatientFields(match.patient, recordYear);
+        }
     }
 
     function autofillPatientByName(name) {
         let match = historyData.find(item => item.patient.name.toLowerCase() === name.trim().toLowerCase());
-        if (match) fillPatientFields(match.patient);
+        if (match) {
+            let recordYear = match.recordYear || new Date(match.id).getFullYear();
+            fillPatientFields(match.patient, recordYear);
+        }
     }
 
     function addToWaitingList() {
@@ -788,10 +836,11 @@
             code: code,
             name: name,
             age: document.getElementById('patientAge').value,
+            ageUnit: document.getElementById('patientAgeUnit').value, // LƯU ĐƠN VỊ TUỔI HOẶC THÁNG
             gender: document.getElementById('patientGender').value,
             address: document.getElementById('patientAddress').value,
             guardian: document.getElementById('patientGuardian').value,
-            isPriority: document.getElementById('patientPriority').checked, // LƯU TRẠNG THÁI ƯU TIÊN
+            isPriority: document.getElementById('patientPriority').checked,
             bp: document.getElementById('vitalBP').value,
             pulse: document.getElementById('vitalPulse').value,
             temp: document.getElementById('vitalTemp').value,
@@ -836,7 +885,6 @@
                 }
             }
 
-            // ĐÁNH DẤU LỚP DÙNG CHO MÀU TÔ (ƯU TIÊN LÀM MÀU VÀNG PASTEL, TÁI KHÁM LÀ MÀU XANH PASTEL)
             let cardClass = '';
             if (item.isPriority) {
                 cardClass = 'is-priority';
@@ -844,11 +892,13 @@
                 cardClass = 'is-revisit';
             }
 
+            let ageText = item.age ? `${item.age} ${item.ageUnit || 'tuổi'}` : '';
+
             container.innerHTML += `
                 <div class="waiting-card ${cardClass}">
                     <div>
                         <div style="font-size: 15px; font-weight: bold; color: var(--primary);">
-                            #${index + 1}. [${item.code}] ${item.name} - ${item.age} tuổi (${item.gender})
+                            #${index + 1}. [${item.code}] ${item.name} - ${ageText} (${item.gender})
                             ${item.isPriority ? '<span style="background:#f57f17; color:#fff; font-size:11px; padding:2px 6px; border-radius:10px; margin-left:8px;">ƯU TIÊN KHÁM</span>' : ''}
                             ${isRevisitToday ? '<span style="background:#2e7d32; color:#fff; font-size:11px; padding:2px 6px; border-radius:10px; margin-left:8px;">Hôm nay tái khám</span>' : ''}
                         </div>
@@ -872,10 +922,53 @@
         let p = waitingList.find(w => w.id === id);
         if (p) {
             currentPatient = {...p};
-            document.getElementById('currentPatientBrief').innerText = 
-                `[Mã: ${currentPatient.code}] ${currentPatient.name} - ${currentPatient.age} tuổi - ${currentPatient.gender} - ĐC: ${currentPatient.address}`;
+            let ageText = currentPatient.age ? `${currentPatient.age} ${currentPatient.ageUnit || 'tuổi'}` : '';
             
+            document.getElementById('currentPatientBrief').innerText = 
+                `[Mã: ${currentPatient.code}] ${currentPatient.name} - ${ageText} - ${currentPatient.gender} - ĐC: ${currentPatient.address}`;
+            
+            // KIỂM TRA VÀ HIỂN THỊ TÍNH NĂNG CHỌN TOA THUỐC CỦ
+            setupOldPrescriptionDropdown();
+
             showTab('ke-don');
+        }
+    }
+
+    // TÍNH NĂNG MỚI: CHỌN SỬ DỤNG TOA CỦ
+    function setupOldPrescriptionDropdown() {
+        let section = document.getElementById('oldPrescriptionSection');
+        let select = document.getElementById('oldPrescriptionSelect');
+        select.innerHTML = '';
+
+        if (!currentPatient.name) {
+            section.style.display = 'none';
+            return;
+        }
+
+        let patientHistory = historyData.filter(h => h.patient.code === currentPatient.code || h.patient.name.toLowerCase() === currentPatient.name.toLowerCase());
+
+        if (patientHistory.length > 0) {
+            patientHistory.forEach(record => {
+                let option = document.createElement('option');
+                option.value = record.id;
+                let medsSummary = record.meds.map(m => m.tradeName).join(', ');
+                option.innerText = `Ngày: ${record.date} | Chẩn đoán: ${record.icd || 'Khám thường'} | Thuốc: ${medsSummary}`;
+                select.appendChild(option);
+            });
+            section.style.display = 'block';
+        } else {
+            section.style.display = 'none';
+        }
+    }
+
+    function loadSelectedOldPrescription() {
+        let selectedId = parseInt(document.getElementById('oldPrescriptionSelect').value);
+        let record = historyData.find(h => h.id === selectedId);
+        if (record) {
+            document.getElementById('prescriptionICD').value = record.icd || '';
+            prescriptionMeds = JSON.parse(JSON.stringify(record.meds || []));
+            renderPrescriptionTable();
+            alert('Đã nạp toàn bộ thuốc từ toa cũ thành công!');
         }
     }
 
@@ -915,10 +1008,11 @@
         document.getElementById('patientCode').value = '';
         document.getElementById('patientName').value = '';
         document.getElementById('patientAge').value = '';
+        document.getElementById('patientAgeUnit').value = 'tuổi';
         document.getElementById('patientGender').value = 'Nam';
         document.getElementById('patientAddress').value = '';
         document.getElementById('patientGuardian').value = '';
-        document.getElementById('patientPriority').checked = false; // RESET TICK ƯU TIÊN
+        document.getElementById('patientPriority').checked = false;
         document.getElementById('vitalBP').value = '';
         document.getElementById('vitalPulse').value = '';
         document.getElementById('vitalTemp').value = '';
@@ -931,7 +1025,9 @@
         document.getElementById('searchMedicine').value = '';
         document.getElementById('revisitDays').value = 0;
         updateRevisitDateText();
+        document.getElementById('includeExamFeeCheck').checked = true;
         document.getElementById('extraFeeCheck').checked = false;
+        document.getElementById('oldPrescriptionSection').style.display = 'none';
         
         document.getElementById('currentPatientBrief').innerText = 'Chưa chọn bệnh nhân. Vui lòng chọn ở tab "Chờ Khám".';
         renderPrescriptionTable();
@@ -1140,9 +1236,10 @@
         renderPrescriptionTable();
     }
 
+    // CẢI TIẾN: CHO PHÉP CHỌN TÍNH HOẶC BỎ TIỀN KHÁM 50.000 VNĐ
     function calculateGrandTotal() {
         let medSum = prescriptionMeds.reduce((acc, cur) => acc + cur.totalPrice, 0);
-        let examFee = 50000;
+        let examFee = document.getElementById('includeExamFeeCheck').checked ? 50000 : 0;
         let extraFee = document.getElementById('extraFeeCheck').checked ? 30000 : 0;
         let grandTotal = examFee + medSum + extraFee;
 
@@ -1167,6 +1264,7 @@
         let record = {
             id: Date.now(),
             date: new Date().toLocaleString('vi-VN'),
+            recordYear: new Date().getFullYear(), // LƯU NĂM ĐỂ TÍNH TUỔI MỚI CHO CÁC NĂM SAU
             patient: currentPatient,
             icd: icdVal,
             meds: [...prescriptionMeds],
@@ -1247,6 +1345,8 @@
         let month = String(today.getMonth() + 1).padStart(2, '0');
         let year = today.getFullYear();
 
+        let ageDisplay = p.age ? `${p.age} ${p.ageUnit || 'tuổi'}` : '';
+
         if (printType === 'prescription') {
             let medsListHTML = record.meds.map((m, idx) => {
                 let doseParts = [];
@@ -1278,7 +1378,6 @@
                 `;
             }).join('');
 
-            // ĐỔI DÒNG THÔNG TIN NGƯỜI THÂN Ở FOOTER TOA THUỐC
             let guardianDisplay = p.guardian ? `<strong>${p.guardian}</strong>` : '..........................................................................................';
             
             let adviceText = "Hẹn tái khám sau khi hết thuốc hoặc có dấu hiệu bất thường.";
@@ -1306,7 +1405,7 @@
                     <div class="flex-row" style="align-items: baseline;">
                         <span style="margin-right: 5px;">Họ và tên:</span>
                         <strong style="text-transform: uppercase; font-size: 10.5pt; flex: 1;">${p.name}</strong>
-                        <span style="margin-right: 15px;">Tuổi: ${p.age}</span>
+                        <span style="margin-right: 15px;">Tuổi: ${ageDisplay}</span>
                         <span>Giới tính: ${p.gender}</span>
                     </div>
                     <div>
@@ -1339,13 +1438,14 @@
                     </div>
                 </div>
 
-                <!-- ĐỔI DÒNG THÀNH "Người thân:" -->
                 <div style="font-size: 8pt; font-style: italic; border-top: 0.5px solid #ccc; padding-top: 4px; margin-top: 10px;">
                     <div>Người thân: ${guardianDisplay}</div>
                     <div>Khám lại xin mang theo đơn này</div>
                 </div>
             `;
         } else {
+            let examFeeRow = record.totals.examFee > 0 ? `<tr><td style="border: 1px solid #000; padding: 4px;">Tiền khám bệnh</td><td style="border: 1px solid #000; padding: 4px; text-align: right;">${record.totals.examFee.toLocaleString('vi-VN')} đ</td></tr>` : '';
+
             html = `
                 <div style="text-align: center; border-bottom: 1.5px solid #000; padding-bottom: 4px; margin-bottom: 8px;">
                     <h2 style="font-size: 12pt; text-transform: uppercase;">PHÒNG KHÁM ĐA KHOA BS. MINH</h2>
@@ -1361,7 +1461,7 @@
                             <strong style="text-transform: uppercase; font-size: 10.5pt;">${p.name}</strong>
                         </div>
                         <div>
-                            <span>Tuổi: ${p.age}</span>
+                            <span>Tuổi: ${ageDisplay}</span>
                         </div>
                     </div>
                     <div>
@@ -1380,7 +1480,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr><td style="border: 1px solid #000; padding: 4px;">Tiền khám bệnh</td><td style="border: 1px solid #000; padding: 4px; text-align: right;">${record.totals.examFee.toLocaleString('vi-VN')} đ</td></tr>
+                        ${examFeeRow}
                         <tr><td style="border: 1px solid #000; padding: 4px;">Tổng tiền thuốc</td><td style="border: 1px solid #000; padding: 4px; text-align: right;">${record.totals.medSum.toLocaleString('vi-VN')} đ</td></tr>
                         ${record.totals.extraFee > 0 ? `<tr><td style="border: 1px solid #000; padding: 4px;">Thủ thuật / Chi phí phát sinh</td><td style="border: 1px solid #000; padding: 4px; text-align: right;">${record.totals.extraFee.toLocaleString('vi-VN')} đ</td></tr>` : ''}
                         <tr><th style="border: 1px solid #000; padding: 4px; text-align: left;">TỔNG CỘNG THANH TOÁN</th><th style="border: 1px solid #000; padding: 4px; text-align: right;">${record.totals.grandTotal.toLocaleString('vi-VN')} đ</th></tr>
@@ -1412,12 +1512,14 @@
         );
 
         filtered.forEach((item) => {
+            let ageText = item.patient.age ? `${item.patient.age}${item.patient.ageUnit === 'tháng' ? 'th' : 't'}` : '';
+
             tbody.innerHTML += `
                 <tr>
                     <td>${item.date}</td>
                     <td>${item.patient.code}</td>
                     <td><strong>${item.patient.name}</strong></td>
-                    <td>${item.patient.age}t / ${item.patient.gender}</td>
+                    <td>${ageText} / ${item.patient.gender}</td>
                     <td>${item.icd || '-'}</td>
                     <td>${item.totals.grandTotal.toLocaleString('vi-VN')} đ</td>
                     <td>
@@ -1436,10 +1538,11 @@
         if (!record) return;
 
         let p = record.patient;
+        let ageText = p.age ? `${p.age} ${p.ageUnit || 'tuổi'}` : '';
         let medsHtml = record.meds.map((m, i) => `<li><strong>${m.tradeName}</strong>: SL ${m.qty} ${m.unit} (${m.usageNote || 'Uống'})</li>`).join('');
 
         let html = `
-            <p><strong>Bệnh nhân:</strong> ${p.name} (${p.age}t - ${p.gender})</p>
+            <p><strong>Bệnh nhân:</strong> ${p.name} (${ageText} - ${p.gender})</p>
             <p><strong>Mã BN:</strong> ${p.code} | <strong>ĐC:</strong> ${p.address || 'Chưa nhập'}</p>
             ${p.guardian ? `<p><strong>Người thân:</strong> ${p.guardian}</p>` : ''}
             <p><strong>Ngày khám:</strong> ${record.date}</p>
