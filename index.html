@@ -997,13 +997,16 @@
             return;
         }
 
-        let patientHistory = historyData.filter(h => h.patient.code === currentPatient.code || h.patient.name.toLowerCase() === currentPatient.name.toLowerCase());
+        let patientHistory = historyData.filter(h => 
+            (h.patient.code && h.patient.code === currentPatient.code) || 
+            (h.patient.name && h.patient.name.toLowerCase() === currentPatient.name.toLowerCase())
+        );
 
         if (patientHistory.length > 0) {
             patientHistory.forEach(record => {
                 let option = document.createElement('option');
                 option.value = String(record.id);
-                let medsSummary = record.meds.map(m => m.tradeName).join(', ');
+                let medsSummary = (record.meds || []).map(m => m.tradeName).join(', ');
                 option.innerText = `Ngày: ${record.date} | Chẩn đoán: ${record.icd || 'Khám thường'} | Thuốc: ${medsSummary}`;
                 select.appendChild(option);
             });
@@ -1013,24 +1016,32 @@
         }
     }
 
-    // SỬA LỖI NẠP TOA CŨ CHUẨN XÁC VÀ TỰ BỎ TIỀN KHÁM 50.000Đ
+    // ĐÃ SỬA CHẮC CHẮN NẠP ĐƯỢC TOA CŨ VÀ TỰ BỎ TÍCH TIỀN KHÁM
     function loadSelectedOldPrescription() {
-        let selectVal = document.getElementById('oldPrescriptionSelect').value;
-        if (!selectVal) { alert('Chưa chọn toa thuốc cũ!'); return; }
+        let selectEl = document.getElementById('oldPrescriptionSelect');
+        if (!selectEl || !selectEl.value) {
+            alert('Chưa chọn lượt khám cũ!');
+            return;
+        }
 
-        let record = historyData.find(h => String(h.id) === String(selectVal));
-        if (record) {
+        let selectedIdStr = String(selectEl.value);
+        let record = historyData.find(h => String(h.id) === selectedIdStr);
+
+        if (record && record.meds && record.meds.length > 0) {
+            // Nạp chẩn đoán ICD cũ
             document.getElementById('prescriptionICD').value = record.icd || '';
-            prescriptionMeds = JSON.parse(JSON.stringify(record.meds || []));
+            
+            // Sao chép danh sách thuốc cũ
+            prescriptionMeds = JSON.parse(JSON.stringify(record.meds));
             renderPrescriptionTable();
 
-            // TỰ ĐỘNG BỎ TÍCH TIỀN KHÁM BỆNH KHI DÙNG TOA CŨ
+            // Tự động bỏ tích tiền khám 50.000đ khi dùng lại toa cũ
             document.getElementById('includeExamFeeCheck').checked = false;
             calculateGrandTotal();
 
-            alert('Đã nạp thành công đơn thuốc cũ! (Đã tự động miễn tiền khám 50.000đ)');
+            alert('Đã nạp thành công đơn thuốc cũ! (Đã tự động bỏ tính tiền khám 50.000đ)');
         } else {
-            alert('Không tìm thấy dữ liệu đơn thuốc cũ!');
+            alert('Không tìm thấy dữ liệu đơn thuốc cũ hoặc lượt khám này không có thuốc!');
         }
     }
 
