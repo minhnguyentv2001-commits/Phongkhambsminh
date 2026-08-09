@@ -899,12 +899,15 @@
         });
     }
 
+    // ĐÃ SỬA CHUẨN XÁC LOGIC TÍNH TUỔI / NĂM / THÁNG / NGÀY
     function calculateAgeFromDob(dobStr) {
         if (!dobStr) return;
-        let birthDate = new Date(dobStr);
+        
+        // Chuyển chuỗi YYYY-MM-DD về giờ địa phương
+        let parts = dobStr.split('-');
+        if (parts.length !== 3) return;
+        let birthDate = new Date(parts[0], parts[1] - 1, parts[2]);
         let today = new Date();
-
-        if (isNaN(birthDate.getTime())) return;
 
         let diffTime = today - birthDate;
         if (diffTime < 0) return;
@@ -918,13 +921,16 @@
 
         if (totalMonths < 36) {
             if (totalMonths < 1) {
+                // Dưới 1 tháng -> Đơn vị Ngày
                 document.getElementById('patientAge').value = Math.max(1, diffDays);
                 document.getElementById('patientAgeUnit').value = 'ngày';
             } else {
+                // Từ 1 đến 35 tháng -> Đơn vị Tháng
                 document.getElementById('patientAge').value = totalMonths;
                 document.getElementById('patientAgeUnit').value = 'tháng';
             }
         } else {
+            // Từ 36 tháng trở lên -> Đơn vị Tuổi
             let age = today.getFullYear() - birthDate.getFullYear();
             let m = today.getMonth() - birthDate.getMonth();
             if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
@@ -1141,7 +1147,6 @@
         let clsList = getSelectedClsList();
         if (clsList.length === 0) { alert('Chưa chọn dịch vụ cận lâm sàng nào để in!'); return; }
 
-        // Tự động lưu chỉ định CLS vào bệnh án trước khi in
         currentPatient.cls = clsList.join('; ');
 
         let today = new Date();
@@ -1568,7 +1573,6 @@
         return { examFee, medSum, extraFee, grandTotal };
     }
 
-    // TỰ ĐỘNG LƯU CẢ DỮ LIỆU CẬN LÂM SÀNG VÀO HỒ SƠ LỊCH SỬ
     function savePrescriptionRecord() {
         let totals = calculateGrandTotal();
         let icdVal = document.getElementById('prescriptionICD').value;
@@ -1583,7 +1587,6 @@
         localStorage.setItem('pk_stock', JSON.stringify(stockData));
         renderStock();
 
-        // Lấy danh sách chỉ định CLS nếu có
         let clsList = getSelectedClsList();
         if (clsList.length > 0) {
             currentPatient.cls = clsList.join('; ');
@@ -1861,7 +1864,6 @@
         });
     }
 
-    // HIỂN THỊ CHI TIẾT LỊCH SỬ KHÁM BAO GỒM CẢ CẬN LÂM SÀNG
     function viewHistoryDetail(id) {
         let record = historyData.find(item => item.id === id);
         if (!record) return;
