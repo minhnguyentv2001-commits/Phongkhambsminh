@@ -283,8 +283,13 @@
                     <input type="text" id="patientName" list="oldPatientNames" placeholder="Tên bệnh nhân..." onchange="autofillPatientByName(this.value)">
                     <datalist id="oldPatientNames"></datalist>
                 </div>
+                <!-- BỔ SUNG Ô NGÀY SINH DÙNG ĐỂ TỰ ĐỘNG TÍNH TUỔI VÀ SỐ THÁNG -->
                 <div class="form-group">
-                    <label>Tuổi / Tháng tuổi:</label>
+                    <label>Ngày / Tháng / Năm sinh:</label>
+                    <input type="date" id="patientDob" onchange="calculateAgeFromDob(this.value)">
+                </div>
+                <div class="form-group">
+                    <label>Tuổi / Tháng tuổi (Tự tính hoặc nhập):</label>
                     <div style="display: flex; gap: 5px;">
                         <input type="number" id="patientAge" placeholder="Tuổi" style="flex: 1;">
                         <select id="patientAgeUnit" style="width: 85px;">
@@ -779,7 +784,40 @@
         });
     }
 
+    // TÍNH NĂNG MỚI: TỰ ĐỘNG TÍNH TUỔI HOẶC SỐ THÁNG TỪ NGÀY/THÁNG/NĂM SINH
+    function calculateAgeFromDob(dobStr) {
+        if (!dobStr) return;
+        let birthDate = new Date(dobStr);
+        let today = new Date();
+
+        if (isNaN(birthDate.getTime())) return;
+
+        let totalMonths = (today.getFullYear() - birthDate.getFullYear()) * 12 + (today.getMonth() - birthDate.getMonth());
+        if (today.getDate() < birthDate.getDate()) {
+            totalMonths--;
+        }
+
+        if (totalMonths < 36) {
+            // Trẻ em dưới 36 tháng tuổi (dưới 3 tuổi) -> Tự động tính ra Tháng
+            document.getElementById('patientAge').value = Math.max(1, totalMonths);
+            document.getElementById('patientAgeUnit').value = 'tháng';
+        } else {
+            // Từ 3 tuổi trở lên -> Tự động tính ra Tuổi
+            let age = today.getFullYear() - birthDate.getFullYear();
+            let m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            document.getElementById('patientAge').value = age;
+            document.getElementById('patientAgeUnit').value = 'tuổi';
+        }
+    }
+
     function calculateUpdatedAge(p, recordYear) {
+        if (p.dob) {
+            calculateAgeFromDob(p.dob);
+            return document.getElementById('patientAge').value;
+        }
         if (!p.age) return '';
         let currentYear = new Date().getFullYear();
         let unit = p.ageUnit || 'tuổi';
@@ -794,7 +832,8 @@
     function fillPatientFields(p, recordYear) {
         document.getElementById('patientCode').value = p.code || '';
         document.getElementById('patientName').value = p.name || '';
-        
+        document.getElementById('patientDob').value = p.dob || '';
+
         let calculatedAge = calculateUpdatedAge(p, recordYear);
         document.getElementById('patientAge').value = calculatedAge;
         document.getElementById('patientAgeUnit').value = p.ageUnit || 'tuổi';
@@ -820,14 +859,12 @@
         }
     }
 
-    // TÍNH NĂNG MỚI: TỰ ĐỘNG SINH MÃ BỆNH NHÂN KHÔNG TRÙNG LẶP (ĐỊNH DẠNG BN + YYMM + STT)
     function generateUniquePatientCode() {
         let now = new Date();
         let yy = String(now.getFullYear()).slice(-2);
         let mm = String(now.getMonth() + 1).padStart(2, '0');
         let prefix = `BN${yy}${mm}`;
 
-        // Tập hợp tất cả các mã BN đã có trong Lịch Sử và Hàng Chờ
         let existingCodes = new Set();
         historyData.forEach(h => { if (h.patient && h.patient.code) existingCodes.add(h.patient.code); });
         waitingList.forEach(w => { if (w.code) existingCodes.add(w.code); });
@@ -854,6 +891,7 @@
             id: Date.now(),
             code: code,
             name: name,
+            dob: document.getElementById('patientDob').value, // LƯU NGÀY SINH LÂU DÀI
             age: document.getElementById('patientAge').value,
             ageUnit: document.getElementById('patientAgeUnit').value,
             gender: document.getElementById('patientGender').value,
@@ -1028,6 +1066,7 @@
         prescriptionMeds = [];
         document.getElementById('patientCode').value = '';
         document.getElementById('patientName').value = '';
+        document.getElementById('patientDob').value = '';
         document.getElementById('patientAge').value = '';
         document.getElementById('patientAgeUnit').value = 'tuổi';
         document.getElementById('patientGender').value = 'Nam';
@@ -1564,6 +1603,7 @@
         let html = `
             <p><strong>Bệnh nhân:</strong> ${p.name} (${ageText} - ${p.gender})</p>
             <p><strong>Mã BN:</strong> ${p.code} | <strong>ĐC:</strong> ${p.address || 'Chưa nhập'}</p>
+            ${p.dob ? `<p><strong>Ngày sinh:</strong> ${p.dob}</p>` : ''}
             ${p.guardian ? `<p><strong>Người thân:</strong> ${p.guardian}</p>` : ''}
             <p><strong>Ngày khám:</strong> ${record.date}</p>
             <p><strong>Chẩn đoán ICD:</strong> ${record.icd || 'Khám thông thường'}</p>
