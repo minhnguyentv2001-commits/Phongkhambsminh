@@ -366,16 +366,14 @@
             </div>
         </div>
 
-        <!-- KHU VỰC SỬ DỤNG TOA CŨ -->
+        <!-- KHU VỰC SỬ DỤNG TOA CŨ (ĐÃ SỬA GIAO DIỆN HIỂN THỊ NÚT BẤM) -->
         <div class="card" id="oldPrescriptionSection" style="display: none; background: #eefbe7; border-color: #c8e6c9;">
             <div class="card-title" style="color: #2e7d32; border-bottom-color: #a5d6a7;">📋 SỬ DỤNG TOA THUỐC CŨ CỦA BỆNH NHÂN NÀY</div>
-            <div class="form-grid">
-                <div class="form-group full">
-                    <label>Chọn lượt khám cũ để nạp lại đơn thuốc:</label>
-                    <div style="display: flex; gap: 10px;">
-                        <select id="oldPrescriptionSelect" style="flex: 1;"></select>
-                        <button class="btn btn-success" type="button" onclick="loadSelectedOldPrescription()">📋 Dùng Toa Cũ Này</button>
-                    </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <label style="font-weight: bold; color: #333;">Chọn lượt khám cũ để nạp lại đơn thuốc:</label>
+                <select id="oldPrescriptionSelect" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #a5d6a7;"></select>
+                <div style="text-align: right; margin-top: 5px;">
+                    <button class="btn btn-success" type="button" onclick="loadSelectedOldPrescription()" style="padding: 10px 20px; font-size: 14px;">📋 Dùng Toa Cũ Này</button>
                 </div>
             </div>
         </div>
@@ -1016,7 +1014,7 @@
         }
     }
 
-    // ĐÃ NÂNG CẤP: ĐỐI SOÁT KHO THUỐC VÀ CẢNH BÁO THUỐC HẾT / KHÔNG CÓ TRONG KHO
+    // ĐÃ NÂNG CẤP TÍNH NĂNG CẢNH BÁO VÀ LỌC THUỐC HẾT / KHÔNG CÓ TRONG KHO
     function loadSelectedOldPrescription() {
         let selectEl = document.getElementById('oldPrescriptionSelect');
         if (!selectEl || !selectEl.value) {
@@ -1032,21 +1030,21 @@
             let unavailableMeds = [];
 
             record.meds.forEach(m => {
-                // Tách tên thuốc nguyên bản (loại bỏ phần hoạt chất trong ngoặc nếu có)
+                // Lấy tên gốc của thuốc (bỏ phần hoạt chất trong ngoặc nếu có)
                 let baseName = m.tradeName.split(' (')[0].trim();
                 
-                // Đối soát với Kho thuốc hiện tại
+                // Tìm kiếm trong Kho thuốc hiện tại
                 let stockItem = stockData.find(s => 
                     s.tradeName.trim().toLowerCase() === baseName.toLowerCase() || 
                     s.tradeName.trim().toLowerCase() === m.tradeName.trim().toLowerCase()
                 );
 
                 if (!stockItem) {
-                    unavailableMeds.push(`${m.tradeName} (Lý do: Không có trong kho)`);
+                    unavailableMeds.push(`${m.tradeName} ➔ (Không có trong kho)`);
                 } else if (stockItem.qty <= 0) {
-                    unavailableMeds.push(`${m.tradeName} (Lý do: Hết hàng trong kho - Tồn: 0)`);
+                    unavailableMeds.push(`${m.tradeName} ➔ (Đã hết hàng trong kho - Tồn: 0)`);
                 } else {
-                    // Cập nhật đơn giá mới nhất theo kho hiện tại
+                    // Nếu thuốc có và còn hàng, nạp vào toa và cập nhật đơn giá theo kho mới nhất
                     let updatedItem = JSON.parse(JSON.stringify(m));
                     updatedItem.price = stockItem.price;
                     updatedItem.totalPrice = updatedItem.qty * stockItem.price;
@@ -1058,7 +1056,7 @@
             // Nạp chẩn đoán ICD cũ
             document.getElementById('prescriptionICD').value = record.icd || '';
             
-            // Cập nhật mảng thuốc kê đơn
+            // Cập nhật danh sách thuốc kê đơn
             prescriptionMeds = loadedMeds;
             renderPrescriptionTable();
 
@@ -1066,11 +1064,12 @@
             document.getElementById('includeExamFeeCheck').checked = false;
             calculateGrandTotal();
 
-            // Thông báo kết quả nạp thuốc
+            // Thông báo báo lỗi/cảnh báo thuốc nếu có thuốc hết
             if (unavailableMeds.length > 0) {
-                let msg = `⚠️ CẢNH BÁO THUỐC TRONG KHO:\nCác thuốc sau trong toa cũ ĐÃ BỊ LỌC BỎ do hết hoặc không có trong kho:\n\n`;
-                msg += unavailableMeds.map((txt, i) => `${i+1}. ${txt}`).join('\n');
-                msg += `\n\n👉 Các thuốc còn lại đã được nạp vào toa. Vui lòng tự chọn thuốc thay thế nếu cần!`;
+                let msg = `⚠️ THÔNG BÁO THUỐC TRONG KHO:\n\n`;
+                msg += `Các thuốc sau trong toa cũ KHÔNG ĐƯỢC THÊM VÀO TOA do hết hoặc không có trong kho:\n\n`;
+                msg += unavailableMeds.map((txt, i) => `  ${i+1}. ${txt}`).join('\n');
+                msg += `\n\n👉 Bạn hãy tự chọn thuốc thay thế khác trong danh mục kho!`;
                 alert(msg);
             } else {
                 alert('Đã nạp thành công toàn bộ thuốc từ toa cũ! (Đã tự động bỏ tiền khám 50.000đ)');
