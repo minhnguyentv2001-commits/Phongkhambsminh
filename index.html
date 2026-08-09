@@ -283,7 +283,6 @@
                     <input type="text" id="patientName" list="oldPatientNames" placeholder="Tên bệnh nhân..." onchange="autofillPatientByName(this.value)">
                     <datalist id="oldPatientNames"></datalist>
                 </div>
-                <!-- BỔ SUNG Ô NGÀY SINH DÙNG ĐỂ TỰ ĐỘNG TÍNH TUỔI VÀ SỐ THÁNG -->
                 <div class="form-group">
                     <label>Ngày / Tháng / Năm sinh:</label>
                     <input type="date" id="patientDob" onchange="calculateAgeFromDob(this.value)">
@@ -367,6 +366,7 @@
             </div>
         </div>
 
+        <!-- KHU VỰC SỬ DỤNG TOA CŨ -->
         <div class="card" id="oldPrescriptionSection" style="display: none; background: #eefbe7; border-color: #c8e6c9;">
             <div class="card-title" style="color: #2e7d32; border-bottom-color: #a5d6a7;">📋 SỬ DỤNG TOA THUỐC CŨ CỦA BỆNH NHÂN NÀY</div>
             <div class="form-grid">
@@ -784,7 +784,6 @@
         });
     }
 
-    // TÍNH NĂNG MỚI: TỰ ĐỘNG TÍNH TUỔI HOẶC SỐ THÁNG TỪ NGÀY/THÁNG/NĂM SINH
     function calculateAgeFromDob(dobStr) {
         if (!dobStr) return;
         let birthDate = new Date(dobStr);
@@ -798,11 +797,9 @@
         }
 
         if (totalMonths < 36) {
-            // Trẻ em dưới 36 tháng tuổi (dưới 3 tuổi) -> Tự động tính ra Tháng
             document.getElementById('patientAge').value = Math.max(1, totalMonths);
             document.getElementById('patientAgeUnit').value = 'tháng';
         } else {
-            // Từ 3 tuổi trở lên -> Tự động tính ra Tuổi
             let age = today.getFullYear() - birthDate.getFullYear();
             let m = today.getMonth() - birthDate.getMonth();
             if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
@@ -891,7 +888,7 @@
             id: Date.now(),
             code: code,
             name: name,
-            dob: document.getElementById('patientDob').value, // LƯU NGÀY SINH LÂU DÀI
+            dob: document.getElementById('patientDob').value,
             age: document.getElementById('patientAge').value,
             ageUnit: document.getElementById('patientAgeUnit').value,
             gender: document.getElementById('patientGender').value,
@@ -1016,18 +1013,24 @@
         }
     }
 
+    // SỬA LỖI NẠP TOA CŨ CHUẨN XÁC VÀ TỰ BỎ TIỀN KHÁM 50.000Đ
     function loadSelectedOldPrescription() {
         let selectVal = document.getElementById('oldPrescriptionSelect').value;
-        if (!selectVal) return;
+        if (!selectVal) { alert('Chưa chọn toa thuốc cũ!'); return; }
 
         let record = historyData.find(h => String(h.id) === String(selectVal));
         if (record) {
             document.getElementById('prescriptionICD').value = record.icd || '';
             prescriptionMeds = JSON.parse(JSON.stringify(record.meds || []));
             renderPrescriptionTable();
-            alert('Đã nạp thành công đơn thuốc cũ xuống dưới!');
+
+            // TỰ ĐỘNG BỎ TÍCH TIỀN KHÁM BỆNH KHI DÙNG TOA CŨ
+            document.getElementById('includeExamFeeCheck').checked = false;
+            calculateGrandTotal();
+
+            alert('Đã nạp thành công đơn thuốc cũ! (Đã tự động miễn tiền khám 50.000đ)');
         } else {
-            alert('Không tìm thấy thông tin đơn thuốc cũ!');
+            alert('Không tìm thấy dữ liệu đơn thuốc cũ!');
         }
     }
 
