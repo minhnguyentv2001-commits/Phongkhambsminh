@@ -308,12 +308,13 @@
                     <input type="date" id="patientDob" onchange="calculateAgeFromDob(this.value)">
                 </div>
                 <div class="form-group">
-                    <label>Tuổi / Tháng tuổi (Tự tính hoặc nhập):</label>
+                    <label>Tuổi / Tháng / Ngày (Tự tính hoặc nhập):</label>
                     <div style="display: flex; gap: 5px;">
                         <input type="number" id="patientAge" placeholder="Tuổi" style="flex: 1;">
                         <select id="patientAgeUnit" style="width: 85px;">
                             <option value="tuổi">Tuổi</option>
                             <option value="tháng">Tháng</option>
+                            <option value="ngày">Ngày</option>
                         </select>
                     </div>
                 </div>
@@ -386,6 +387,7 @@
             </div>
         </div>
 
+        <!-- KHU VỰC SỬ DỤNG TOA CŨ -->
         <div class="card" id="oldPrescriptionSection" style="display: none; background: #eefbe7; border-color: #c8e6c9;">
             <div class="card-title" style="color: #2e7d32; border-bottom-color: #a5d6a7;">📋 SỬ DỤNG TOA THUỐC CŨ CỦA BỆNH NHÂN NÀY</div>
             <div style="display: flex; flex-direction: column; gap: 10px;">
@@ -483,7 +485,7 @@
         </div>
     </div>
 
-    <!-- TAB 4: CHỈ ĐỊNH CẬN LÂM SÀNG (MỚI) -->
+    <!-- TAB 4: CHỈ ĐỊNH CẬN LÂM SÀNG -->
     <div id="chi-dinh-cls" class="tab-content">
         <div class="card">
             <div class="card-title">CHỈ ĐỊNH CẬN LÂM SÀNG (CLS)</div>
@@ -833,6 +835,7 @@
         });
     }
 
+    // NÂNG CẤP TÍNH TUỔI / NĂM / THÁNG / NGÀY
     function calculateAgeFromDob(dobStr) {
         if (!dobStr) return;
         let birthDate = new Date(dobStr);
@@ -840,15 +843,28 @@
 
         if (isNaN(birthDate.getTime())) return;
 
+        let diffTime = today - birthDate;
+        if (diffTime < 0) return;
+
+        let diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
         let totalMonths = (today.getFullYear() - birthDate.getFullYear()) * 12 + (today.getMonth() - birthDate.getMonth());
         if (today.getDate() < birthDate.getDate()) {
             totalMonths--;
         }
 
         if (totalMonths < 36) {
-            document.getElementById('patientAge').value = Math.max(1, totalMonths);
-            document.getElementById('patientAgeUnit').value = 'tháng';
+            if (totalMonths < 1) {
+                // Sơ sinh dưới 1 tháng -> Tính Ngày
+                document.getElementById('patientAge').value = Math.max(1, diffDays);
+                document.getElementById('patientAgeUnit').value = 'ngày';
+            } else {
+                // Dưới 36 tháng -> Tính Tháng
+                document.getElementById('patientAge').value = totalMonths;
+                document.getElementById('patientAgeUnit').value = 'tháng';
+            }
         } else {
+            // Từ 36 tháng trở lên -> Tính Tuổi
             let age = today.getFullYear() - birthDate.getFullYear();
             let m = today.getMonth() - birthDate.getMonth();
             if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
@@ -1037,7 +1053,6 @@
         }
     }
 
-    // XỬ LÝ LƯU VÀ IN CHỈ ĐỊNH CẬN LÂM SÀNG (CLS)
     function getSelectedClsList() {
         let selectedList = [];
         document.querySelectorAll('.cls-checkbox:checked').forEach(cb => {
@@ -1755,7 +1770,7 @@
         );
 
         filtered.forEach((item) => {
-            let ageText = item.patient.age ? `${item.patient.age}${item.patient.ageUnit === 'tháng' ? 'th' : 't'}` : '';
+            let ageText = item.patient.age ? `${item.patient.age}${item.patient.ageUnit === 'tháng' ? 'th' : (item.patient.ageUnit === 'ngày' ? 'ng' : 't')}` : '';
 
             tbody.innerHTML += `
                 <tr>
