@@ -274,8 +274,8 @@
             <div class="card-title">TIẾP NHẬN BỆNH NHÂN</div>
             <div class="form-grid">
                 <div class="form-group">
-                    <label>Mã Bệnh Nhân (Gợi ý BN cũ):</label>
-                    <input type="text" id="patientCode" list="oldPatientCodes" placeholder="Nhập mã hoặc chọn BN cũ..." onchange="autofillPatientByCode(this.value)">
+                    <label>Mã Bệnh Nhân (Để trống để tự tạo mã):</label>
+                    <input type="text" id="patientCode" list="oldPatientCodes" placeholder="Tự tạo mã hoặc chọn BN cũ..." onchange="autofillPatientByCode(this.value)">
                     <datalist id="oldPatientCodes"></datalist>
                 </div>
                 <div class="form-group">
@@ -283,7 +283,6 @@
                     <input type="text" id="patientName" list="oldPatientNames" placeholder="Tên bệnh nhân..." onchange="autofillPatientByName(this.value)">
                     <datalist id="oldPatientNames"></datalist>
                 </div>
-                <!-- CẢI TIẾN: CHO PHÉP CHỌN ĐƠN VỊ TUỔI / THÁNG TRẺ EM -->
                 <div class="form-group">
                     <label>Tuổi / Tháng tuổi:</label>
                     <div style="display: flex; gap: 5px;">
@@ -363,7 +362,6 @@
             </div>
         </div>
 
-        <!-- TÍNH NĂNG MỚI: CHỌN SỬ DỤNG TOA THUỐC CŨ -->
         <div class="card" id="oldPrescriptionSection" style="display: none; background: #eefbe7; border-color: #c8e6c9;">
             <div class="card-title" style="color: #2e7d32; border-bottom-color: #a5d6a7;">📋 SỬ DỤNG TOA THUỐC CŨ CỦA BỆNH NHÂN NÀY</div>
             <div class="form-grid">
@@ -438,7 +436,6 @@
         <div class="card">
             <div class="card-title">THANH TOÁN & HOÀN TẤT</div>
             <div style="font-size: 15px; line-height: 1.8;">
-                <!-- TÍNH NĂNG MỚI: CHO PHÉP CÓ TÍNH TIỀN KHÁM HAY KHÔNG -->
                 <div>
                     <label style="cursor: pointer; font-weight: bold;">
                         <input type="checkbox" id="includeExamFeeCheck" checked onchange="calculateGrandTotal()">
@@ -782,13 +779,11 @@
         });
     }
 
-    // TÍNH NĂNG MỚI: TỰ ĐỘNG TÍNH LẠI TUỔI KHI BƯỚC SANG NĂM MỚI
     function calculateUpdatedAge(p, recordYear) {
         if (!p.age) return '';
         let currentYear = new Date().getFullYear();
         let unit = p.ageUnit || 'tuổi';
 
-        // Chỉ tính cộng tuổi nếu đơn vị là 'tuổi' và năm khám trước nhỏ hơn năm hiện tại
         if (unit === 'tuổi' && recordYear && currentYear > recordYear) {
             let diffYear = currentYear - recordYear;
             return parseInt(p.age) + diffYear;
@@ -800,7 +795,6 @@
         document.getElementById('patientCode').value = p.code || '';
         document.getElementById('patientName').value = p.name || '';
         
-        // Cập nhật số tuổi mới nhất
         let calculatedAge = calculateUpdatedAge(p, recordYear);
         document.getElementById('patientAge').value = calculatedAge;
         document.getElementById('patientAgeUnit').value = p.ageUnit || 'tuổi';
@@ -826,17 +820,42 @@
         }
     }
 
+    // TÍNH NĂNG MỚI: TỰ ĐỘNG SINH MÃ BỆNH NHÂN KHÔNG TRÙNG LẶP (ĐỊNH DẠNG BN + YYMM + STT)
+    function generateUniquePatientCode() {
+        let now = new Date();
+        let yy = String(now.getFullYear()).slice(-2);
+        let mm = String(now.getMonth() + 1).padStart(2, '0');
+        let prefix = `BN${yy}${mm}`;
+
+        // Tập hợp tất cả các mã BN đã có trong Lịch Sử và Hàng Chờ
+        let existingCodes = new Set();
+        historyData.forEach(h => { if (h.patient && h.patient.code) existingCodes.add(h.patient.code); });
+        waitingList.forEach(w => { if (w.code) existingCodes.add(w.code); });
+
+        let sequence = 1;
+        let candidateCode = `${prefix}${String(sequence).padStart(3, '0')}`;
+
+        while (existingCodes.has(candidateCode)) {
+            sequence++;
+            candidateCode = `${prefix}${String(sequence).padStart(3, '0')}`;
+        }
+
+        return candidateCode;
+    }
+
     function addToWaitingList() {
-        let code = document.getElementById('patientCode').value.trim() || 'BN' + Date.now().toString().slice(-6);
         let name = document.getElementById('patientName').value.trim();
         if (!name) { alert('Vui lòng nhập họ tên bệnh nhân!'); return; }
+
+        let codeInput = document.getElementById('patientCode').value.trim();
+        let code = codeInput ? codeInput : generateUniquePatientCode();
 
         let pData = {
             id: Date.now(),
             code: code,
             name: name,
             age: document.getElementById('patientAge').value,
-            ageUnit: document.getElementById('patientAgeUnit').value, // LƯU ĐƠN VỊ TUỔI HOẶC THÁNG
+            ageUnit: document.getElementById('patientAgeUnit').value,
             gender: document.getElementById('patientGender').value,
             address: document.getElementById('patientAddress').value,
             guardian: document.getElementById('patientGuardian').value,
@@ -857,7 +876,7 @@
         saveToDrive();
 
         resetCurrentPatientForm();
-        alert('Đã lưu bệnh nhân vào danh sách Hàng Chờ Khám!');
+        alert(`Đã lưu bệnh nhân [${code}] vào danh sách Hàng Chờ Khám!`);
         showTab('cho-kham');
     }
 
@@ -927,14 +946,12 @@
             document.getElementById('currentPatientBrief').innerText = 
                 `[Mã: ${currentPatient.code}] ${currentPatient.name} - ${ageText} - ${currentPatient.gender} - ĐC: ${currentPatient.address}`;
             
-            // KIỂM TRA VÀ HIỂN THỊ TÍNH NĂNG CHỌN TOA THUỐC CỦ
             setupOldPrescriptionDropdown();
 
             showTab('ke-don');
         }
     }
 
-    // TÍNH NĂNG MỚI: CHỌN SỬ DỤNG TOA CỦ
     function setupOldPrescriptionDropdown() {
         let section = document.getElementById('oldPrescriptionSection');
         let select = document.getElementById('oldPrescriptionSelect');
@@ -950,7 +967,7 @@
         if (patientHistory.length > 0) {
             patientHistory.forEach(record => {
                 let option = document.createElement('option');
-                option.value = record.id;
+                option.value = String(record.id);
                 let medsSummary = record.meds.map(m => m.tradeName).join(', ');
                 option.innerText = `Ngày: ${record.date} | Chẩn đoán: ${record.icd || 'Khám thường'} | Thuốc: ${medsSummary}`;
                 select.appendChild(option);
@@ -962,13 +979,17 @@
     }
 
     function loadSelectedOldPrescription() {
-        let selectedId = parseInt(document.getElementById('oldPrescriptionSelect').value);
-        let record = historyData.find(h => h.id === selectedId);
+        let selectVal = document.getElementById('oldPrescriptionSelect').value;
+        if (!selectVal) return;
+
+        let record = historyData.find(h => String(h.id) === String(selectVal));
         if (record) {
             document.getElementById('prescriptionICD').value = record.icd || '';
             prescriptionMeds = JSON.parse(JSON.stringify(record.meds || []));
             renderPrescriptionTable();
-            alert('Đã nạp toàn bộ thuốc từ toa cũ thành công!');
+            alert('Đã nạp thành công đơn thuốc cũ xuống dưới!');
+        } else {
+            alert('Không tìm thấy thông tin đơn thuốc cũ!');
         }
     }
 
@@ -1236,7 +1257,6 @@
         renderPrescriptionTable();
     }
 
-    // CẢI TIẾN: CHO PHÉP CHỌN TÍNH HOẶC BỎ TIỀN KHÁM 50.000 VNĐ
     function calculateGrandTotal() {
         let medSum = prescriptionMeds.reduce((acc, cur) => acc + cur.totalPrice, 0);
         let examFee = document.getElementById('includeExamFeeCheck').checked ? 50000 : 0;
@@ -1264,7 +1284,7 @@
         let record = {
             id: Date.now(),
             date: new Date().toLocaleString('vi-VN'),
-            recordYear: new Date().getFullYear(), // LƯU NĂM ĐỂ TÍNH TUỔI MỚI CHO CÁC NĂM SAU
+            recordYear: new Date().getFullYear(),
             patient: currentPatient,
             icd: icdVal,
             meds: [...prescriptionMeds],
