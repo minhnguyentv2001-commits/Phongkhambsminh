@@ -129,23 +129,38 @@
         .btn-danger:hover { background: #c62828; }
         .btn-sm { padding: 3px 8px; font-size: 12px; }
 
+        .cls-category-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--primary);
+            margin: 15px 0 8px 0;
+            background: var(--primary-light);
+            padding: 6px 10px;
+            border-radius: 4px;
+        }
+
         .cls-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 10px;
-            margin-bottom: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 8px;
+            margin-bottom: 10px;
         }
         .cls-item {
-            background: #fdf0f5;
-            padding: 10px;
+            background: #fff;
+            padding: 8px 10px;
             border-radius: 6px;
-            border: 1px solid var(--border);
+            border: 1px solid #e0e0e0;
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 13.5px;
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
+            transition: background 0.2s;
+        }
+        .cls-item:hover {
+            background: #fff0f5;
+            border-color: var(--border);
         }
 
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13.5px; }
@@ -485,7 +500,7 @@
         </div>
     </div>
 
-    <!-- TAB 4: CHỈ ĐỊNH CẬN LÂM SÀNG -->
+    <!-- TAB 4: CHỈ ĐỊNH CẬN LÂM SÀNG (ĐÃ CẬP NHẬT DANH MỤC XÉT NGHIỆM MỚI) -->
     <div id="chi-dinh-cls" class="tab-content">
         <div class="card">
             <div class="card-title">CHỈ ĐỊNH CẬN LÂM SÀNG (CLS)</div>
@@ -493,21 +508,59 @@
                 Chưa chọn bệnh nhân. Vui lòng chọn ở tab "Chờ Khám".
             </div>
 
-            <div style="font-weight: bold; margin-bottom: 10px; color: #555;">Chọn nhanh dịch vụ Cận Lâm Sàng:</div>
+            <!-- NHÓM 1: HUYẾT HỌC - ĐÔNG MÁU -->
+            <div class="cls-category-title">🩸 1. HUYẾT HỌC - ĐÔNG MÁU</div>
             <div class="cls-grid">
-                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Công thức máu toàn bộ (CBC)"> Công thức máu (CBC)</label>
-                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Sinh hóa máu (Đường, Gan, Thận)"> Sinh hóa máu cơ bản</label>
-                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Siêu âm bụng tổng quát"> Siêu âm bụng tổng quát</label>
-                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Siêu âm Tim / Mạch máu"> Siêu âm Tim</label>
-                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="X-Quang Ngực thẳng"> X-Quang Ngực thẳng</label>
-                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="X-Quang Cột sống / Xương khớp"> X-Quang Cột sống / Xương</label>
-                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Điện tâm đồ (ECG)"> Điện tâm đồ (ECG)</label>
-                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Tổng phân tích nước tiểu 10 thông số"> Tổng phân tích nước tiểu</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Thời gian đông máu"> Thời gian đông máu</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Tổng phân tích tế bào máu ngoại vi (bằng máy đếm tổng trở)"> Tổng phân tích tế bào máu ngoại vi</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Định nhóm máu hệ ABO (kỹ thuật phiến đá)"> Định nhóm máu hệ ABO</label>
             </div>
 
-            <div class="form-group full" style="margin-top: 10px;">
-                <label>Chỉ định khác / Yêu cầu cụ thể:</label>
-                <textarea id="clsCustomNote" rows="3" placeholder="Nhập thêm chỉ định hoặc chi tiết cận lâm sàng khác..."></textarea>
+            <!-- NHÓM 2: HÓA SINH MÁU -->
+            <div class="cls-category-title">🧪 2. HÓA SINH MÁU</div>
+            <div class="cls-grid">
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Đo hoạt độ ALT (GPT) [Máu]"> Đo hoạt độ ALT (GPT)</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Đo hoạt độ AST (GOT) [Máu]"> Đo hoạt độ AST (GOT)</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Đo hoạt độ GGT (Gama Glutamyl Transferase) [Máu]"> Đo hoạt độ GGT</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Định lượng Acid Uric [Máu]"> Định lượng Acid Uric</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Định lượng Bilirubin toàn phần [Máu]"> Định lượng Bilirubin toàn phần</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Định lượng Bilirubin trực tiếp [Máu]"> Định lượng Bilirubin trực tiếp</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Định lượng Bilirubin gián tiếp [Máu]"> Định lượng Bilirubin gián tiếp</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Định lượng Cholesterol toàn phần (máu)"> Định lượng Cholesterol toàn phần</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Định lượng Triglycerid (máu) [Máu]"> Định lượng Triglycerid</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Định lượng HDL-C [Máu]"> Định lượng HDL-C</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Định lượng LDL-C [Máu]"> Định lượng LDL-C</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Định lượng Creatinin (máu)"> Định lượng Creatinin</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Định lượng Urê máu [Máu]"> Định lượng Urê máu</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Định lượng Glucose [Máu]"> Định lượng Glucose</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Định lượng HbA1c [Máu]"> Định lượng HbA1c</label>
+            </div>
+
+            <!-- NHÓM 3: NƯỚC TIỂU -->
+            <div class="cls-category-title">💧 3. NƯỚC TIỂU</div>
+            <div class="cls-grid">
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Tổng phân tích nước tiểu (Bằng máy tự động)"> Tổng phân tích nước tiểu (Máy tự động)</label>
+            </div>
+
+            <!-- NHÓM 4: TEST NHANH - VI KHUẨN - KST -->
+            <div class="cls-category-title">🔬 4. VI KHUẨN - KST & TEST NHANH</div>
+            <div class="cls-grid">
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Dengue virus NS1Ag test nhanh"> Dengue virus NS1Ag test nhanh</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Dengue virus NS1Ag/IgM - IgG test nhanh"> Dengue virus NS1Ag/IgM - IgG test nhanh</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="HBsAg test nhanh"> HBsAg test nhanh (Viêm gan B)</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="HBeAb test nhanh"> HBeAb test nhanh</label>
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="HCV Ab test nhanh"> HCV Ab test nhanh (Viêm gan C)</label>
+            </div>
+
+            <!-- NHÓM 5: XÉT NGHIỆM KHÁC -->
+            <div class="cls-category-title">📍 5. XÉT NGHIỆM KHÁC</div>
+            <div class="cls-grid">
+                <label class="cls-item"><input type="checkbox" class="cls-checkbox" value="Xét nghiệm đường máu mao mạch tại giường"> Đường máu mao mạch tại giường</label>
+            </div>
+
+            <div class="form-group full" style="margin-top: 15px;">
+                <label>Chỉ định khác / Yêu cầu ghi chú cụ thể:</label>
+                <textarea id="clsCustomNote" rows="2" placeholder="Nhập thêm chỉ định hoặc yêu cầu cận lâm sàng khác..."></textarea>
             </div>
 
             <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
@@ -835,7 +888,6 @@
         });
     }
 
-    // NÂNG CẤP TÍNH TUỔI / NĂM / THÁNG / NGÀY
     function calculateAgeFromDob(dobStr) {
         if (!dobStr) return;
         let birthDate = new Date(dobStr);
@@ -855,16 +907,13 @@
 
         if (totalMonths < 36) {
             if (totalMonths < 1) {
-                // Sơ sinh dưới 1 tháng -> Tính Ngày
                 document.getElementById('patientAge').value = Math.max(1, diffDays);
                 document.getElementById('patientAgeUnit').value = 'ngày';
             } else {
-                // Dưới 36 tháng -> Tính Tháng
                 document.getElementById('patientAge').value = totalMonths;
                 document.getElementById('patientAgeUnit').value = 'tháng';
             }
         } else {
-            // Từ 36 tháng trở lên -> Tính Tuổi
             let age = today.getFullYear() - birthDate.getFullYear();
             let m = today.getMonth() - birthDate.getMonth();
             if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
@@ -1481,7 +1530,7 @@
                     <td>${m.usageNote}</td>
                     <td>${m.price.toLocaleString('vi-VN')} đ</td>
                     <td>${m.totalPrice.toLocaleString('vi-VN')} đ</td>
-                    <td><button class="btn btn-danger btn-sm" onclick="removePrescriptionMed(${idx})">X</button></td>
+                    <td><button class="btn btn-danger btn-sm" onclick="removePrescriptionMed(${idx})">X xóa</button></td>
                 </tr>
             `;
         });
