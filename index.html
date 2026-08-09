@@ -374,7 +374,7 @@
                     <label>Chọn lượt khám cũ để nạp lại đơn thuốc:</label>
                     <div style="display: flex; gap: 10px;">
                         <select id="oldPrescriptionSelect" style="flex: 1;"></select>
-                        <button class="btn btn-success" onclick="loadSelectedOldPrescription()">📋 Dùng Toa Cũ Này</button>
+                        <button class="btn btn-success" type="button" onclick="loadSelectedOldPrescription()">📋 Dùng Toa Cũ Này</button>
                     </div>
                 </div>
             </div>
@@ -406,7 +406,7 @@
                 <div class="form-group"><label>Tối:</label><input type="number" id="doseEvening" value="0" onchange="recalcTotalMedQty()"></div>
                 <div class="form-group"><label>Tổng số lượng:</label><input type="number" id="medTotalQty" readonly style="background: #e9ecef; font-weight: bold;"></div>
                 <div class="form-group" style="grid-column: span 2;"><label>Cách dùng:</label><input type="text" id="medUsageNote" placeholder="Uống sau ăn..."></div>
-                <div class="form-group" style="align-self: flex-end;"><button class="btn" onclick="addMedicineToPrescription()">+ Thêm Thuốc</button></div>
+                <div class="form-group" style="align-self: flex-end;"><button class="btn" type="button" onclick="addMedicineToPrescription()">+ Thêm Thuốc</button></div>
             </div>
 
             <div class="form-grid" style="margin-top: 15px; border-top: 1px dashed var(--border); padding-top: 12px;">
@@ -459,9 +459,9 @@
                 </div>
             </div>
             <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <button class="btn" onclick="completePrescription('prescription')">🖨️ In Đơn Thuốc (A5)</button>
-                <button class="btn btn-outline" onclick="completePrescription('bill')">🧾 In Bảng Kê Chi Phí</button>
-                <button class="btn btn-success" onclick="finishExaminationOnly()">✅ Hoàn Tất Khám (Không In)</button>
+                <button class="btn" type="button" onclick="completePrescription('prescription')">🖨️ In Đơn Thuốc (A5)</button>
+                <button class="btn btn-outline" type="button" onclick="completePrescription('bill')">🧾 In Bảng Kê Chi Phí</button>
+                <button class="btn btn-success" type="button" onclick="finishExaminationOnly()">✅ Hoàn Tất Khám (Không In)</button>
             </div>
         </div>
     </div>
@@ -998,8 +998,8 @@
         }
 
         let patientHistory = historyData.filter(h => 
-            (h.patient.code && h.patient.code === currentPatient.code) || 
-            (h.patient.name && h.patient.name.toLowerCase() === currentPatient.name.toLowerCase())
+            (h.patient && h.patient.code && h.patient.code === currentPatient.code) || 
+            (h.patient && h.patient.name && h.patient.name.toLowerCase() === currentPatient.name.toLowerCase())
         );
 
         if (patientHistory.length > 0) {
@@ -1016,7 +1016,7 @@
         }
     }
 
-    // ĐÃ SỬA CHẮC CHẮN NẠP ĐƯỢC TOA CŨ VÀ TỰ BỎ TÍCH TIỀN KHÁM
+    // ĐÃ NÂNG CẤP: ĐỐI SOÁT KHO THUỐC VÀ CẢNH BÁO THUỐC HẾT / KHÔNG CÓ TRONG KHO
     function loadSelectedOldPrescription() {
         let selectEl = document.getElementById('oldPrescriptionSelect');
         if (!selectEl || !selectEl.value) {
@@ -1028,20 +1028,55 @@
         let record = historyData.find(h => String(h.id) === selectedIdStr);
 
         if (record && record.meds && record.meds.length > 0) {
+            let loadedMeds = [];
+            let unavailableMeds = [];
+
+            record.meds.forEach(m => {
+                // Tách tên thuốc nguyên bản (loại bỏ phần hoạt chất trong ngoặc nếu có)
+                let baseName = m.tradeName.split(' (')[0].trim();
+                
+                // Đối soát với Kho thuốc hiện tại
+                let stockItem = stockData.find(s => 
+                    s.tradeName.trim().toLowerCase() === baseName.toLowerCase() || 
+                    s.tradeName.trim().toLowerCase() === m.tradeName.trim().toLowerCase()
+                );
+
+                if (!stockItem) {
+                    unavailableMeds.push(`${m.tradeName} (Lý do: Không có trong kho)`);
+                } else if (stockItem.qty <= 0) {
+                    unavailableMeds.push(`${m.tradeName} (Lý do: Hết hàng trong kho - Tồn: 0)`);
+                } else {
+                    // Cập nhật đơn giá mới nhất theo kho hiện tại
+                    let updatedItem = JSON.parse(JSON.stringify(m));
+                    updatedItem.price = stockItem.price;
+                    updatedItem.totalPrice = updatedItem.qty * stockItem.price;
+                    updatedItem.stockId = stockItem.id;
+                    loadedMeds.push(updatedItem);
+                }
+            });
+
             // Nạp chẩn đoán ICD cũ
             document.getElementById('prescriptionICD').value = record.icd || '';
             
-            // Sao chép danh sách thuốc cũ
-            prescriptionMeds = JSON.parse(JSON.stringify(record.meds));
+            // Cập nhật mảng thuốc kê đơn
+            prescriptionMeds = loadedMeds;
             renderPrescriptionTable();
 
-            // Tự động bỏ tích tiền khám 50.000đ khi dùng lại toa cũ
+            // Tự động bỏ chọn tiền khám 50.000đ khi dùng toa cũ
             document.getElementById('includeExamFeeCheck').checked = false;
             calculateGrandTotal();
 
-            alert('Đã nạp thành công đơn thuốc cũ! (Đã tự động bỏ tính tiền khám 50.000đ)');
+            // Thông báo kết quả nạp thuốc
+            if (unavailableMeds.length > 0) {
+                let msg = `⚠️ CẢNH BÁO THUỐC TRONG KHO:\nCác thuốc sau trong toa cũ ĐÃ BỊ LỌC BỎ do hết hoặc không có trong kho:\n\n`;
+                msg += unavailableMeds.map((txt, i) => `${i+1}. ${txt}`).join('\n');
+                msg += `\n\n👉 Các thuốc còn lại đã được nạp vào toa. Vui lòng tự chọn thuốc thay thế nếu cần!`;
+                alert(msg);
+            } else {
+                alert('Đã nạp thành công toàn bộ thuốc từ toa cũ! (Đã tự động bỏ tiền khám 50.000đ)');
+            }
         } else {
-            alert('Không tìm thấy dữ liệu đơn thuốc cũ hoặc lượt khám này không có thuốc!');
+            alert('Không tìm thấy dữ liệu đơn thuốc cũ!');
         }
     }
 
