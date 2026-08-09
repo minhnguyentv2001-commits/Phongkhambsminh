@@ -251,13 +251,30 @@
                 color: black !important;
             }
 
-            #printArea div, #printArea p, #printArea table, #printArea tbody, #printArea tr, #printArea td {
-                display: revert !important;
+            #printArea div, #printArea p {
+                display: block !important;
             }
 
-            /* Đã bỏ inline-block ở thẻ th để cột không bị biến dạng */
-            #printArea th {
+            #printArea table {
+                display: table !important;
+                width: 100% !important;
+                border-collapse: collapse !important;
+            }
+
+            #printArea tbody {
+                display: table-row-group !important;
+            }
+
+            #printArea tr {
+                display: table-row !important;
+            }
+
+            /* Đã sửa định dạng hiển thị cho các ô trong bảng */
+            #printArea th, #printArea td {
                 display: table-cell !important;
+                border: 1px solid #000 !important;
+                padding: 6px 8px !important;
+                vertical-align: middle !important;
             }
 
             #printArea span, #printArea strong, #printArea i {
@@ -277,18 +294,6 @@
 
             #printArea .flex-row {
                 display: flex !important;
-            }
-
-            /* CSS BẢNG CẬN LÂM SÀNG CHUẨN KÍCH THƯỚC */
-            #printArea table.cls-table {
-                width: 100% !important;
-                border-collapse: collapse !important;
-                margin-top: 10px !important;
-            }
-            #printArea table.cls-table th, #printArea table.cls-table td {
-                border: 1px solid #000 !important;
-                padding: 6px 8px !important;
-                vertical-align: middle !important;
             }
         }
     </style>
@@ -905,13 +910,17 @@
         });
     }
 
-    // ĐÃ SỬA THUẬT TOÁN TÍNH TUỔI / MỐC 36 THÁNG
+    // ĐÃ SỬA THUẬT TOÁN TÍNH TUỔI / NĂM / THÁNG / NGÀY TỰ ĐỘNG CHUẨN XÁC
     function calculateAgeFromDob(dobStr) {
         if (!dobStr) return;
         
         let parts = dobStr.split('-');
         if (parts.length !== 3) return;
-        let birthDate = new Date(parts[0], parts[1] - 1, parts[2]);
+        let birthYear = parseInt(parts[0]);
+        let birthMonth = parseInt(parts[1]) - 1;
+        let birthDay = parseInt(parts[2]);
+
+        let birthDate = new Date(birthYear, birthMonth, birthDay);
         let today = new Date();
 
         let diffTime = today - birthDate;
@@ -919,8 +928,8 @@
 
         let diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-        let totalMonths = (today.getFullYear() - birthDate.getFullYear()) * 12 + (today.getMonth() - birthDate.getMonth());
-        if (today.getDate() < birthDate.getDate()) {
+        let totalMonths = (today.getFullYear() - birthYear) * 12 + (today.getMonth() - birthMonth);
+        if (today.getDate() < birthDay) {
             totalMonths--;
         }
 
@@ -933,12 +942,8 @@
                 document.getElementById('patientAgeUnit').value = 'tháng';
             }
         } else {
-            // Đã sửa: Ép buộc số tháng >= 36 chuyển về đơn vị Tuổi
-            let age = today.getFullYear() - birthDate.getFullYear();
-            let m = today.getMonth() - birthDate.getMonth();
-            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-                age--;
-            }
+            // Lấy Năm hiện tại trừ Năm sinh để ra tuổi
+            let age = today.getFullYear() - birthYear;
             document.getElementById('patientAge').value = age;
             document.getElementById('patientAgeUnit').value = 'tuổi';
         }
@@ -1144,7 +1149,7 @@
         alert('Đã lưu chỉ định Cận lâm sàng vào bệnh án thành công!');
     }
 
-    // ĐÃ SỬA LỖI ĐỘ RỘNG BẢNG IN CẬN LÂM SÀNG A5
+    // ĐÃ SỬA CỘT BẢNG CẬN LÂM SÀNG CÂN ĐỐI CHUẨN XÁC KHI IN
     function printClsSheet() {
         if (!currentPatient.name) { alert('Chưa chọn bệnh nhân khám!'); return; }
 
@@ -1161,8 +1166,8 @@
 
         let clsItemsHtml = clsList.map((item, idx) => `
             <tr>
-                <td style="border: 1px solid #000; padding: 5px; text-align: center; font-size: 10pt; width: 45px;">${idx + 1}</td>
-                <td style="border: 1px solid #000; padding: 5px 8px; font-size: 10pt;"><strong>${item}</strong></td>
+                <td style="border: 1px solid #000; padding: 6px; text-align: center; font-size: 10pt; width: 45px;">${idx + 1}</td>
+                <td style="border: 1px solid #000; padding: 6px 8px; font-size: 10pt; text-align: left;"><strong>${item}</strong></td>
             </tr>
         `).join('');
 
@@ -1186,11 +1191,11 @@
                 <div>Chẩn đoán sơ bộ: ${icdVal}</div>
             </div>
 
-            <table class="cls-table" style="width: 100%; border-collapse: collapse;">
+            <table class="cls-table">
                 <thead>
                     <tr style="background: #f0f0f0;">
-                        <th style="border: 1px solid #000; padding: 5px; width: 45px; text-align: center; font-size: 10pt;">STT</th>
-                        <th style="border: 1px solid #000; padding: 5px 8px; text-align: center; font-size: 10pt;">Dịch vụ cận lâm sàng chỉ định</th>
+                        <th style="border: 1px solid #000; padding: 6px; width: 45px; text-align: center; font-size: 10pt;">STT</th>
+                        <th style="border: 1px solid #000; padding: 6px 8px; text-align: center; font-size: 10pt;">Dịch vụ cận lâm sàng chỉ định</th>
                     </tr>
                 </thead>
                 <tbody>
