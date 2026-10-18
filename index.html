@@ -261,6 +261,10 @@
                 border-collapse: collapse !important;
             }
 
+            #printArea thead {
+                display: table-header-group !important;
+            }
+
             #printArea tbody {
                 display: table-row-group !important;
             }
@@ -302,7 +306,7 @@
 <header>
     <h1>PHÒNG KHÁM ĐA KHOA BS. MINH</h1>
     <p>Địa chỉ: 274, Quốc lộ 53, khóm Đa Cần, phường Hòa Thuận, tỉnh Vĩnh Long</p>
-    <p>Bác sĩ điều trị: Nguyễn Bảo Minh | Điện thoại/Zalo: 0977973104</p>
+    <p>Bác sĩ điều trị: Nguyễn Bảo Minh | Điện thoại/Zalo: 0947973104</p>
 </header>
 
 <div class="auth-bar">
@@ -702,7 +706,7 @@
     const FILE_NAME = 'phongkham_database.json';
 
     let tokenClient;
-    let gapiInited = false;
+    gapiInited = false;
     let gisInited = false;
     let driveFileId = null;
 
@@ -1163,8 +1167,8 @@
 
         let clsItemsHtml = clsList.map((item, idx) => `
             <tr>
-                <td style="border: 1px solid #000; padding: 6px; text-align: center; font-size: 10pt;">${idx + 1}</td>
-                <td style="border: 1px solid #000; padding: 6px 8px; font-size: 10pt; text-align: left;"><strong>${item}</strong></td>
+                <td style="border: 1px solid #000; padding: 6px; text-align: center; font-size: 10pt; width: 12%;">${idx + 1}</td>
+                <td style="border: 1px solid #000; padding: 6px 8px; font-size: 10pt; text-align: left; width: 88%; word-wrap: break-word;"><strong>${item}</strong></td>
             </tr>
         `).join('');
 
@@ -1174,7 +1178,7 @@
             <div style="text-align: center; border-bottom: 1.5px solid #000; padding-bottom: 4px; margin-bottom: 8px;">
                 <h2 style="font-size: 12pt; text-transform: uppercase;">PHÒNG KHÁM ĐA KHOA BS. MINH</h2>
                 <p style="font-size: 8.5pt;">ĐC: 274, Quốc lộ 53, khóm Đa Cần, phường Hòa Thuận, tỉnh Vĩnh Long</p>
-                <p style="font-size: 8.5pt;">BS Điều trị: Nguyễn Bảo Minh - ĐT/Zalo: 0977973104</p>
+                <p style="font-size: 8.5pt;">BS Điều trị: Nguyễn Bảo Minh - ĐT/Zalo: 0947973104</p>
             </div>
 
             <div style="text-align: center; font-size: 13pt; font-weight: bold; margin: 10px 0; text-transform: uppercase;">GIẤY CHỈ ĐỊNH CẬN LÂM SÀNG</div>
@@ -1188,15 +1192,11 @@
                 <div>Chẩn đoán sơ bộ: ${icdVal}</div>
             </div>
 
-            <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
-                <colgroup>
-                    <col style="width: 50px;">
-                    <col style="width: auto;">
-                </colgroup>
+            <table style="width: 100%; border-collapse: collapse;">
                 <thead>
                     <tr style="background: #f0f0f0;">
-                        <th style="border: 1px solid #000; padding: 6px; text-align: center; font-size: 10pt;">STT</th>
-                        <th style="border: 1px solid #000; padding: 6px 8px; text-align: center; font-size: 10pt;">Dịch vụ cận lâm sàng chỉ định</th>
+                        <th style="border: 1px solid #000; padding: 6px; text-align: center; font-size: 10pt; width: 12%;">STT</th>
+                        <th style="border: 1px solid #000; padding: 6px 8px; text-align: center; font-size: 10pt; width: 88%;">Dịch vụ cận lâm sàng chỉ định</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1791,7 +1791,7 @@
                 <div style="text-align: center; border-bottom: 1.5px solid #000; padding-bottom: 4px; margin-bottom: 8px;">
                     <h2 style="font-size: 12pt; text-transform: uppercase;">PHÒNG KHÁM ĐA KHOA BS. MINH</h2>
                     <p style="font-size: 8.5pt;">ĐC: 274, Quốc lộ 53, khóm Đa Cần, phường Hòa Thuận, tỉnh Vĩnh Long</p>
-                    <p style="font-size: 8.5pt;">BS Điều trị: Nguyễn Bảo Minh - ĐT/Zalo: 0977973104</p>
+                    <p style="font-size: 8.5pt;">BS Điều trị: Nguyễn Bảo Minh - ĐT/Zalo: 0947973104</p>
                 </div>
                 <div style="text-align: center; font-size: 13pt; font-weight: bold; margin: 10px 0; text-transform: uppercase;">BẢNG KÊ CHI PHÍ KHÁM BỆNH</div>
                 
