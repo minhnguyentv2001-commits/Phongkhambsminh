@@ -44,8 +44,26 @@
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 10px;
         }
-        .sync-status { font-size: 13px; font-weight: 600; color: #555; }
+        .sync-status { font-size: 13px; font-weight: 600; color: #555; display: flex; align-items: center; gap: 6px; }
+        .sync-badge {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #9e9e9e;
+        }
+        .sync-badge.online { background: #2e7d32; box-shadow: 0 0 6px #4caf50; }
+        .sync-badge.saving { background: #f57f17; animation: pulse 1s infinite; }
+        .sync-badge.error { background: #e53935; }
+
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(1.2); }
+            100% { opacity: 1; transform: scale(1); }
+        }
 
         nav {
             display: flex;
@@ -310,10 +328,13 @@
 </header>
 
 <div class="auth-bar">
-    <div class="sync-status" id="syncStatus">Trạng thái: Chưa xác thực Google Drive</div>
+    <div class="sync-status">
+        <span id="syncBadge" class="sync-badge"></span>
+        <span id="syncStatus">Trạng thái: Chưa kết nối Google Drive (Dữ liệu đang lưu tạm trên máy)</span>
+    </div>
     <div>
         <button id="authBtn" class="btn" onclick="handleAuthClick()">Đăng Nhập Google Drive</button>
-        <button id="syncBtn" class="btn btn-outline" style="display:none;" onclick="syncWithDrive()">🔄 Đồng Bộ Ngay</button>
+        <button id="syncBtn" class="btn btn-outline" style="display:none;" onclick="syncWithDrive()">🔄 Đồng Bộ Thủ Công</button>
     </div>
 </div>
 
@@ -503,7 +524,7 @@
                 <div>
                     <label style="cursor: pointer; font-weight: bold;">
                         <input type="checkbox" id="includeExamFeeCheck" checked onchange="calculateGrandTotal()">
-                        Tính tiền khám bệnh (50.000 VNĐ)
+                        Tính tiền khám bệnh (30.000 VNĐ)
                     </label>
                 </div>
                 <div>Tổng tiền thuốc: <strong id="totalMedPriceText">0 VNĐ</strong></div>
@@ -514,7 +535,7 @@
                     </label>
                 </div>
                 <div style="font-size: 18px; color: var(--primary); font-weight: bold; margin-top: 5px;">
-                    TỔNG CỘNG THANH TOÁN: <span id="grandTotalText">50.000 VNĐ</span>
+                    TỔNG CỘNG THANH TOÁN: <span id="grandTotalText">30.000 VNĐ</span>
                 </div>
             </div>
             <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
@@ -706,9 +727,34 @@
     const FILE_NAME = 'phongkham_database.json';
 
     let tokenClient;
-    gapiInited = false;
+    let gapiInited = false;
     let gisInited = false;
-    let driveFileId = null;
+    let driveFileId = localStorage.getItem('pk_drive_file_id') || null;
+
+    // Biến điều phối tự động đồng bộ (Auto-Sync Engine)
+    let autoSyncTimer = null;
+    let isSyncing = false;
+    let pendingSyncAfterCurrent = false;
+    let hasUnsyncedChanges = localStorage.getItem('pk_unsynced') === 'true';
+    let tokenRefreshTimer = null;
+
+    let stockData = JSON.parse(localStorage.getItem('pk_stock')) || [];
+    let icdData = JSON.parse(localStorage.getItem('pk_icd')) || [];
+    let historyData = JSON.parse(localStorage.getItem('pk_history')) || [];
+    let waitingList = JSON.parse(localStorage.getItem('pk_waiting')) || [];
+    let currentPatient = {};
+    let prescriptionMeds = [];
+
+    function setSyncUI(state, message) {
+        const badge = document.getElementById('syncBadge');
+        const statusEl = document.getElementById('syncStatus');
+        if (badge) {
+            badge.className = 'sync-badge ' + (state || '');
+        }
+        if (statusEl && message) {
+            statusEl.innerText = message;
+        }
+    }
 
     function gapiLoaded() {
         gapi.load('client', async () => {
@@ -723,7 +769,19 @@
             client_id: CLIENT_ID,
             scope: SCOPES,
             callback: async (resp) => {
-                if (resp.error !== undefined) { throw (resp); }
+                if (resp.error !== undefined) {
+                    console.error('Lỗi OAuth:', resp);
+                    setSyncUI('error', 'Lỗi xác thực Google Drive. Vui lòng bấm Đăng Nhập lại.');
+                    document.getElementById('authBtn').style.display = 'inline-block';
+                    return;
+                }
+                // Lưu token vào localStorage để tự động khôi phục khi F5 hoặc mở lại trang
+                const expiresIn = parseInt(resp.expires_in) || 3599;
+                const expiresAt = Date.now() + (expiresIn - 120) * 1000;
+                localStorage.setItem('pk_oauth_token', resp.access_token);
+                localStorage.setItem('pk_oauth_expires_at', String(expiresAt));
+                scheduleTokenAutoRefresh(expiresIn);
+
                 await verifyAndLoadUser();
             },
         });
@@ -731,9 +789,31 @@
         checkAuthInit();
     }
 
-    function checkAuthInit() {
+    function scheduleTokenAutoRefresh(expiresInSeconds) {
+        if (tokenRefreshTimer) clearTimeout(tokenRefreshTimer);
+        // Tự động làm mới token trước khi hết hạn 3 phút
+        const refreshDelayMs = Math.max(60, (expiresInSeconds - 180)) * 1000;
+        tokenRefreshTimer = setTimeout(() => {
+            if (tokenClient) {
+                tokenClient.requestAccessToken({ prompt: '', login_hint: ALLOWED_EMAIL });
+            }
+        }, refreshDelayMs);
+    }
+
+    async function checkAuthInit() {
         if (gapiInited && gisInited) {
-            document.getElementById('authBtn').style.display = 'inline-block';
+            // Kiểm tra xem có token còn hạn trong máy không để tự kết nối luôn
+            const savedToken = localStorage.getItem('pk_oauth_token');
+            const expiresAt = parseInt(localStorage.getItem('pk_oauth_expires_at') || '0');
+
+            if (savedToken && Date.now() < expiresAt) {
+                gapi.client.setToken({ access_token: savedToken });
+                const remainingSec = Math.floor((expiresAt - Date.now()) / 1000);
+                scheduleTokenAutoRefresh(remainingSec);
+                await verifyAndLoadUser(true);
+            } else {
+                document.getElementById('authBtn').style.display = 'inline-block';
+            }
         }
     }
 
@@ -745,38 +825,67 @@
         renderHistory();
         renderWaitingList();
         updatePatientDatalist();
+        restoreDraftState();
+        setupAutoSyncListeners();
     };
 
     function handleAuthClick() {
-        tokenClient.requestAccessToken({ prompt: 'consent' });
+        tokenClient.requestAccessToken({ prompt: 'select_account', login_hint: ALLOWED_EMAIL });
     }
 
-    async function verifyAndLoadUser() {
+    async function verifyAndLoadUser(isSilentRestore = false) {
         try {
+            let tokenObj = gapi.client.getToken();
+            if (!tokenObj || !tokenObj.access_token) return;
+
             let res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                headers: { Authorization: `Bearer ${gapi.client.getToken().access_token}` }
+                headers: { Authorization: `Bearer ${tokenObj.access_token}` }
             });
+
+            if (!res.ok) {
+                // Token hết hạn hoặc không hợp lệ
+                localStorage.removeItem('pk_oauth_token');
+                localStorage.removeItem('pk_oauth_expires_at');
+                document.getElementById('authBtn').style.display = 'inline-block';
+                document.getElementById('syncBtn').style.display = 'none';
+                setSyncUI('', 'Phiên Google Drive đã hết hạn. Vui lòng bấm Đăng Nhập lại.');
+                return;
+            }
+
             let userInfo = await res.json();
 
             if (userInfo.email !== ALLOWED_EMAIL) {
                 alert(`Tài khoản ${userInfo.email} không có quyền truy cập! Vui lòng đăng nhập bằng ${ALLOWED_EMAIL}`);
-                document.getElementById('syncStatus').innerText = 'Chặn truy cập: Email không khớp';
+                setSyncUI('error', 'Chặn truy cập: Email không khớp');
                 return;
             }
 
-            document.getElementById('syncStatus').innerText = `Đã đăng nhập: ${userInfo.email}`;
+            setSyncUI('online', `Đã kết nối tự động: ${userInfo.email}`);
             document.getElementById('authBtn').style.display = 'none';
             document.getElementById('syncBtn').style.display = 'inline-block';
 
-            await loadDataFromDrive();
+            await loadDataFromDrive(isSilentRestore);
         } catch (err) {
             console.error('Lỗi xác thực người dùng:', err);
+            setSyncUI('error', 'Lỗi kết nối mạng khi kiểm tra tài khoản');
         }
     }
 
-    async function loadDataFromDrive() {
+    // Gộp dữ liệu thông minh để không làm mất dữ liệu vừa nhập trên máy trước khi đăng nhập
+    function mergeArraysByKey(driveArr, localArr, keyField) {
+        const map = new Map();
+        (driveArr || []).forEach(item => {
+            if (item && item[keyField] !== undefined) map.set(String(item[keyField]), item);
+        });
+        (localArr || []).forEach(item => {
+            if (item && item[keyField] !== undefined) map.set(String(item[keyField]), item);
+        });
+        return Array.from(map.values());
+    }
+
+    async function loadDataFromDrive(isSilentRestore = false) {
         try {
-            document.getElementById('syncStatus').innerText = 'Đang tải dữ liệu từ Google Drive...';
+            setSyncUI('saving', 'Đang đồng bộ dữ liệu với Google Drive...');
             let res = await gapi.client.drive.files.list({
                 q: `name='${FILE_NAME}' and trashed=false`,
                 fields: 'files(id, name)',
@@ -785,98 +894,339 @@
             let files = res.result.files;
             if (files && files.length > 0) {
                 driveFileId = files[0].id;
+                localStorage.setItem('pk_drive_file_id', driveFileId);
+
                 let fileRes = await gapi.client.drive.files.get({
                     fileId: driveFileId,
                     alt: 'media'
                 });
                 
                 let data = fileRes.result;
-                if (data) {
-                    stockData = data.stock || [];
-                    icdData = data.icd || [];
-                    historyData = data.history || [];
-                    waitingList = data.waiting || [];
+                if (data && typeof data === 'object') {
+                    if (hasUnsyncedChanges) {
+                        // Nếu trên máy có dữ liệu mới nhập chưa kịp đẩy lên Drive -> Gộp cả 2 bên rồi lưu ngay lên Drive
+                        stockData = mergeArraysByKey(data.stock, stockData, 'id');
+                        icdData = mergeArraysByKey(data.icd, icdData, 'code');
+                        historyData = mergeArraysByKey(data.history, historyData, 'id').sort((a, b) => b.id - a.id);
+                        waitingList = mergeArraysByKey(data.waiting, waitingList, 'id');
+                    } else {
+                        stockData = data.stock || [];
+                        icdData = data.icd || [];
+                        historyData = data.history || [];
+                        waitingList = data.waiting || [];
+                        if (data.draft && (!currentPatient || !currentPatient.name)) {
+                            localStorage.setItem('pk_draft', JSON.stringify(data.draft));
+                            restoreDraftState();
+                        }
+                    }
 
-                    localStorage.setItem('pk_stock', JSON.stringify(stockData));
-                    localStorage.setItem('pk_icd', JSON.stringify(icdData));
-                    localStorage.setItem('pk_history', JSON.stringify(historyData));
-                    localStorage.setItem('pk_waiting', JSON.stringify(waitingList));
+                    saveAllToLocalStorage(false);
 
                     renderStock();
                     renderICD();
                     renderHistory();
                     renderWaitingList();
                     updatePatientDatalist();
-                    document.getElementById('syncStatus').innerText = 'Đã đồng bộ với Google Drive!';
+
+                    if (hasUnsyncedChanges) {
+                        await saveToDrive(true);
+                    } else {
+                        const nowStr = new Date().toLocaleTimeString('vi-VN');
+                        setSyncUI('online', `Tự động đồng bộ hoàn tất lúc ${nowStr}`);
+                    }
                 }
             } else {
-                document.getElementById('syncStatus').innerText = 'Tạo file lưu trữ mới trên Google Drive...';
-                await saveToDrive();
+                setSyncUI('saving', 'Đang khởi tạo file lưu trữ trên Google Drive...');
+                await saveToDrive(true);
             }
         } catch (err) {
             console.error('Lỗi khi tải dữ liệu từ Drive:', err);
-            document.getElementById('syncStatus').innerText = 'Lỗi đồng bộ Drive';
+            setSyncUI('error', 'Lỗi tải dữ liệu Drive (Dữ liệu vẫn an toàn trên máy)');
         }
     }
 
-    async function saveToDrive() {
-        if (!gapi.client.getToken()) return;
+    // Lưu trạng thái đang làm việc dở (Draft) để không mất khi thoát đột ngột
+    function buildDraftObject() {
+        let selectedCls = [];
+        document.querySelectorAll('.cls-checkbox:checked').forEach(cb => selectedCls.push(cb.value));
 
+        return {
+            currentPatient: currentPatient,
+            prescriptionMeds: prescriptionMeds,
+            prescriptionICD: document.getElementById('prescriptionICD') ? document.getElementById('prescriptionICD').value : '',
+            revisitDays: document.getElementById('revisitDays') ? document.getElementById('revisitDays').value : 0,
+            includeExamFee: document.getElementById('includeExamFeeCheck') ? document.getElementById('includeExamFeeCheck').checked : true,
+            extraFee: document.getElementById('extraFeeCheck') ? document.getElementById('extraFeeCheck').checked : false,
+            clsChecked: selectedCls,
+            clsCustomNote: document.getElementById('clsCustomNote') ? document.getElementById('clsCustomNote').value : '',
+            intakeForm: {
+                patientCode: document.getElementById('patientCode') ? document.getElementById('patientCode').value : '',
+                patientName: document.getElementById('patientName') ? document.getElementById('patientName').value : '',
+                patientDob: document.getElementById('patientDob') ? document.getElementById('patientDob').value : '',
+                patientAge: document.getElementById('patientAge') ? document.getElementById('patientAge').value : '',
+                patientAgeUnit: document.getElementById('patientAgeUnit') ? document.getElementById('patientAgeUnit').value : 'tuổi',
+                patientGender: document.getElementById('patientGender') ? document.getElementById('patientGender').value : 'Nam',
+                patientAddress: document.getElementById('patientAddress') ? document.getElementById('patientAddress').value : '',
+                patientGuardian: document.getElementById('patientGuardian') ? document.getElementById('patientGuardian').value : '',
+                patientPriority: document.getElementById('patientPriority') ? document.getElementById('patientPriority').checked : false,
+                vitalBP: document.getElementById('vitalBP') ? document.getElementById('vitalBP').value : '',
+                vitalPulse: document.getElementById('vitalPulse') ? document.getElementById('vitalPulse').value : '',
+                vitalTemp: document.getElementById('vitalTemp') ? document.getElementById('vitalTemp').value : '',
+                vitalResp: document.getElementById('vitalResp') ? document.getElementById('vitalResp').value : '',
+                vitalWeight: document.getElementById('vitalWeight') ? document.getElementById('vitalWeight').value : '',
+                vitalHeight: document.getElementById('vitalHeight') ? document.getElementById('vitalHeight').value : '',
+                clinicalSymptoms: document.getElementById('clinicalSymptoms') ? document.getElementById('clinicalSymptoms').value : '',
+                clsResults: document.getElementById('clsResults') ? document.getElementById('clsResults').value : ''
+            }
+        };
+    }
+
+    function restoreDraftState() {
         try {
-            document.getElementById('syncStatus').innerText = 'Đang sao lưu lên Google Drive...';
+            const raw = localStorage.getItem('pk_draft');
+            if (!raw) return;
+            const draft = JSON.parse(raw);
+            if (!draft) return;
+
+            if (draft.intakeForm) {
+                const f = draft.intakeForm;
+                if (f.patientCode) document.getElementById('patientCode').value = f.patientCode;
+                if (f.patientName) document.getElementById('patientName').value = f.patientName;
+                if (f.patientDob) document.getElementById('patientDob').value = f.patientDob;
+                if (f.patientAge) document.getElementById('patientAge').value = f.patientAge;
+                if (f.patientAgeUnit) document.getElementById('patientAgeUnit').value = f.patientAgeUnit;
+                if (f.patientGender) document.getElementById('patientGender').value = f.patientGender;
+                if (f.patientAddress) document.getElementById('patientAddress').value = f.patientAddress;
+                if (f.patientGuardian) document.getElementById('patientGuardian').value = f.patientGuardian;
+                document.getElementById('patientPriority').checked = !!f.patientPriority;
+                if (f.vitalBP) document.getElementById('vitalBP').value = f.vitalBP;
+                if (f.vitalPulse) document.getElementById('vitalPulse').value = f.vitalPulse;
+                if (f.vitalTemp) document.getElementById('vitalTemp').value = f.vitalTemp;
+                if (f.vitalResp) document.getElementById('vitalResp').value = f.vitalResp;
+                if (f.vitalWeight) document.getElementById('vitalWeight').value = f.vitalWeight;
+                if (f.vitalHeight) document.getElementById('vitalHeight').value = f.vitalHeight;
+                if (f.clinicalSymptoms) document.getElementById('clinicalSymptoms').value = f.clinicalSymptoms;
+                if (f.clsResults) document.getElementById('clsResults').value = f.clsResults;
+            }
+
+            if (draft.currentPatient && draft.currentPatient.name) {
+                currentPatient = draft.currentPatient;
+                let ageText = currentPatient.age ? `${currentPatient.age} ${currentPatient.ageUnit || 'tuổi'}` : '';
+                let briefText = `[Mã: ${currentPatient.code}] ${currentPatient.name} - ${ageText} - ${currentPatient.gender} - ĐC: ${currentPatient.address}`;
+                document.getElementById('currentPatientBrief').innerText = briefText;
+                document.getElementById('clsPatientBrief').innerText = briefText;
+                setupOldPrescriptionDropdown();
+            }
+
+            if (Array.isArray(draft.prescriptionMeds) && draft.prescriptionMeds.length > 0) {
+                prescriptionMeds = draft.prescriptionMeds;
+            }
+            if (draft.prescriptionICD !== undefined) {
+                document.getElementById('prescriptionICD').value = draft.prescriptionICD;
+            }
+            if (draft.revisitDays !== undefined) {
+                document.getElementById('revisitDays').value = draft.revisitDays;
+                updateRevisitDateText();
+            }
+            if (draft.includeExamFee !== undefined) {
+                document.getElementById('includeExamFeeCheck').checked = draft.includeExamFee;
+            }
+            if (draft.extraFee !== undefined) {
+                document.getElementById('extraFeeCheck').checked = draft.extraFee;
+            }
+            if (Array.isArray(draft.clsChecked)) {
+                document.querySelectorAll('.cls-checkbox').forEach(cb => {
+                    cb.checked = draft.clsChecked.includes(cb.value);
+                });
+            }
+            if (draft.clsCustomNote !== undefined) {
+                document.getElementById('clsCustomNote').value = draft.clsCustomNote;
+            }
+
+            renderPrescriptionTable();
+        } catch (e) {
+            console.error('Lỗi khôi phục bản nháp:', e);
+        }
+    }
+
+    function saveAllToLocalStorage(markUnsynced = true) {
+        localStorage.setItem('pk_stock', JSON.stringify(stockData));
+        localStorage.setItem('pk_icd', JSON.stringify(icdData));
+        localStorage.setItem('pk_history', JSON.stringify(historyData));
+        localStorage.setItem('pk_waiting', JSON.stringify(waitingList));
+        localStorage.setItem('pk_draft', JSON.stringify(buildDraftObject()));
+
+        if (markUnsynced) {
+            hasUnsyncedChanges = true;
+            localStorage.setItem('pk_unsynced', 'true');
+        }
+    }
+
+    // Điều phối tự động lưu có chống nghẽn (Debounce + Queue)
+    function scheduleAutoSync(delayMs = 0) {
+        saveAllToLocalStorage(true);
+
+        if (autoSyncTimer) {
+            clearTimeout(autoSyncTimer);
+            autoSyncTimer = null;
+        }
+
+        if (!gapiInited || !gapi.client || !gapi.client.getToken()) {
+            setSyncUI('', 'Đã lưu vào máy (Đăng nhập Google Drive để tự động đồng bộ)');
+            return;
+        }
+
+        setSyncUI('saving', 'Phát hiện thay đổi - Đang chuẩn bị tự động lưu...');
+
+        if (delayMs <= 0) {
+            saveToDrive();
+        } else {
+            autoSyncTimer = setTimeout(() => {
+                autoSyncTimer = null;
+                saveToDrive();
+            }, delayMs);
+        }
+    }
+
+    function setupAutoSyncListeners() {
+        const container = document.querySelector('.container');
+        if (container) {
+            // Bất kỳ thao tác gõ phím hoặc chọn ô nào cũng tự lưu sau 0.8s ngừng gõ
+            container.addEventListener('input', (e) => {
+                if (e.target && e.target.id === 'historySearch') return;
+                scheduleAutoSync(800);
+            });
+            container.addEventListener('change', (e) => {
+                if (e.target && e.target.id === 'historySearch') return;
+                scheduleAutoSync(500);
+            });
+        }
+
+        // Khi người dùng chuyển tab hoặc thu nhỏ trình duyệt -> Đẩy dữ liệu lên Drive ngay lập tức
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden' && (hasUnsyncedChanges || autoSyncTimer)) {
+                if (autoSyncTimer) {
+                    clearTimeout(autoSyncTimer);
+                    autoSyncTimer = null;
+                }
+                saveToDrive(true);
+            }
+        });
+
+        // Khi người dùng bấm đóng tab -> Đẩy dữ liệu với cờ keepalive để chạy ngầm
+        window.addEventListener('beforeunload', (e) => {
+            saveAllToLocalStorage(hasUnsyncedChanges);
+            if (hasUnsyncedChanges || autoSyncTimer || isSyncing) {
+                if (autoSyncTimer) {
+                    clearTimeout(autoSyncTimer);
+                    autoSyncTimer = null;
+                }
+                saveToDrive(true);
+
+                // Nếu file lớn hơn 60KB và đang tải dở thì nhắc người dùng chờ 1 giây
+                const payloadSize = new Blob([JSON.stringify({ stock: stockData, icd: icdData, history: historyData, waiting: waitingList })]).size;
+                if (gapi.client && gapi.client.getToken() && payloadSize >= 60000) {
+                    e.preventDefault();
+                    e.returnValue = 'Dữ liệu đang được tự động lưu lên Google Drive...';
+                    return e.returnValue;
+                }
+            }
+        });
+    }
+
+    async function saveToDrive(isUrgentExit = false) {
+        if (!gapiInited || !gapi.client || !gapi.client.getToken()) return;
+
+        // Nếu đang có 1 tiến trình lưu đang chạy và đây không phải là lúc thoát khẩn cấp, xếp vào hàng đợi
+        if (isSyncing && !isUrgentExit) {
+            pendingSyncAfterCurrent = true;
+            return;
+        }
+
+        isSyncing = true;
+        try {
+            setSyncUI('saving', 'Đang tự động lưu lên Google Drive...');
             let dbContent = {
                 stock: stockData,
                 icd: icdData,
                 history: historyData,
                 waiting: waitingList,
+                draft: buildDraftObject(),
                 updatedAt: new Date().toISOString()
             };
 
             let fileContent = JSON.stringify(dbContent);
-            let metadata = {
-                name: FILE_NAME,
-                mimeType: 'application/json'
-            };
+            let payloadSize = new Blob([fileContent]).size;
+            // Trình duyệt cho phép keepalive tối đa 64KB để chạy ngầm ngay cả khi đã đóng tab
+            let canKeepAlive = payloadSize < 60000;
+            let token = gapi.client.getToken().access_token;
 
             if (driveFileId) {
-                await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
+                let res = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
                     method: 'PATCH',
+                    keepalive: canKeepAlive,
                     headers: {
-                        Authorization: `Bearer ${gapi.client.getToken().access_token}`,
+                        Authorization: `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     },
                     body: fileContent
                 });
+
+                if (res.status === 401) {
+                    // Token hết hạn giữa chừng -> Tự động yêu cầu cấp lại
+                    if (tokenClient && !isUrgentExit) {
+                        tokenClient.requestAccessToken({ prompt: '', login_hint: ALLOWED_EMAIL });
+                    }
+                    throw new Error('Token hết hạn (401)');
+                }
+                if (res.status === 404) {
+                    // Nếu file cũ trên Drive bị xóa thì tạo mới
+                    driveFileId = null;
+                    localStorage.removeItem('pk_drive_file_id');
+                    isSyncing = false;
+                    return await saveToDrive(isUrgentExit);
+                }
             } else {
+                let metadata = {
+                    name: FILE_NAME,
+                    mimeType: 'application/json'
+                };
                 let form = new FormData();
                 form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
                 form.append('file', new Blob([fileContent], { type: 'application/json' }));
 
                 let res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
                     method: 'POST',
-                    headers: { Authorization: `Bearer ${gapi.client.getToken().access_token}` },
+                    keepalive: canKeepAlive,
+                    headers: { Authorization: `Bearer ${token}` },
                     body: form
                 });
                 let file = await res.json();
-                driveFileId = file.id;
+                if (file && file.id) {
+                    driveFileId = file.id;
+                    localStorage.setItem('pk_drive_file_id', driveFileId);
+                }
             }
-            document.getElementById('syncStatus').innerText = 'Sao lưu Google Drive hoàn tất!';
+
+            hasUnsyncedChanges = false;
+            localStorage.setItem('pk_unsynced', 'false');
+            const nowStr = new Date().toLocaleTimeString('vi-VN');
+            setSyncUI('online', `Đã tự động lưu lên Google Drive lúc ${nowStr}`);
         } catch (err) {
             console.error('Lỗi khi sao lưu lên Drive:', err);
-            document.getElementById('syncStatus').innerText = 'Lỗi khi sao lưu Drive';
+            setSyncUI('error', 'Chưa lưu được lên Drive (Đang lưu an toàn trên máy, sẽ tự thử lại)');
+        } finally {
+            isSyncing = false;
+            if (pendingSyncAfterCurrent) {
+                pendingSyncAfterCurrent = false;
+                saveToDrive();
+            }
         }
     }
 
     function syncWithDrive() {
-        saveToDrive();
+        scheduleAutoSync(0);
     }
-
-    let stockData = JSON.parse(localStorage.getItem('pk_stock')) || [];
-    let icdData = JSON.parse(localStorage.getItem('pk_icd')) || [];
-    let historyData = JSON.parse(localStorage.getItem('pk_history')) || [];
-    let waitingList = JSON.parse(localStorage.getItem('pk_waiting')) || [];
-    let currentPatient = {};
-    let prescriptionMeds = [];
 
     function showTab(tabId) {
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -948,6 +1298,7 @@
             document.getElementById('patientAge').value = age;
             document.getElementById('patientAgeUnit').value = 'tuổi';
         }
+        scheduleAutoSync(800);
     }
 
     function calculateUpdatedAge(p, recordYear) {
@@ -978,6 +1329,7 @@
         document.getElementById('patientGender').value = p.gender || 'Nam';
         document.getElementById('patientAddress').value = p.address || '';
         document.getElementById('patientGuardian').value = p.guardian || '';
+        scheduleAutoSync(500);
     }
 
     function autofillPatientByCode(code) {
@@ -1017,6 +1369,26 @@
         return candidateCode;
     }
 
+    function clearIntakeFormOnly() {
+        document.getElementById('patientCode').value = '';
+        document.getElementById('patientName').value = '';
+        document.getElementById('patientDob').value = '';
+        document.getElementById('patientAge').value = '';
+        document.getElementById('patientAgeUnit').value = 'tuổi';
+        document.getElementById('patientGender').value = 'Nam';
+        document.getElementById('patientAddress').value = '';
+        document.getElementById('patientGuardian').value = '';
+        document.getElementById('patientPriority').checked = false;
+        document.getElementById('vitalBP').value = '';
+        document.getElementById('vitalPulse').value = '';
+        document.getElementById('vitalTemp').value = '';
+        document.getElementById('vitalResp').value = '';
+        document.getElementById('vitalWeight').value = '';
+        document.getElementById('vitalHeight').value = '';
+        document.getElementById('clinicalSymptoms').value = '';
+        document.getElementById('clsResults').value = '';
+    }
+
     function addToWaitingList() {
         let name = document.getElementById('patientName').value.trim();
         if (!name) { alert('Vui lòng nhập họ tên bệnh nhân!'); return; }
@@ -1046,11 +1418,10 @@
         };
 
         waitingList.push(pData);
-        localStorage.setItem('pk_waiting', JSON.stringify(waitingList));
+        clearIntakeFormOnly();
         renderWaitingList();
-        saveToDrive();
+        scheduleAutoSync(0); // Tự động đồng bộ ngay lập tức
 
-        resetCurrentPatientForm();
         alert(`Đã lưu bệnh nhân [${code}] vào danh sách Hàng Chờ Khám!`);
         showTab('cho-kham');
     }
@@ -1123,6 +1494,7 @@
             document.getElementById('clsPatientBrief').innerText = briefText;
             
             setupOldPrescriptionDropdown();
+            scheduleAutoSync(0);
 
             showTab('ke-don');
         }
@@ -1140,24 +1512,35 @@
         return selectedList;
     }
 
+    function syncCurrentPatientClsToWaitingList(clsStr) {
+        currentPatient.cls = clsStr;
+        if (currentPatient.id) {
+            let wItem = waitingList.find(w => w.id === currentPatient.id);
+            if (wItem) {
+                wItem.cls = clsStr;
+            }
+        }
+    }
+
     function saveClsNoteToPatient() {
         if (!currentPatient.name) { alert('Chưa chọn bệnh nhân khám!'); return; }
         
         let clsList = getSelectedClsList();
         if (clsList.length === 0) { alert('Chưa chọn hoặc nhập chỉ định Cận lâm sàng nào!'); return; }
 
-        currentPatient.cls = clsList.join('; ');
-        alert('Đã lưu chỉ định Cận lâm sàng vào bệnh án thành công!');
+        syncCurrentPatientClsToWaitingList(clsList.join('; '));
+        scheduleAutoSync(0); // Tự động lưu CLS vào bệnh án và đồng bộ lên Drive ngay
+        alert('Đã lưu chỉ định Cận lâm sàng vào bệnh án và đồng bộ thành công!');
     }
 
-    // ĐÃ SỬA: Cố định cột STT hẹp, nhường toàn bộ không gian cho cột nội dung dịch vụ
     function printClsSheet() {
         if (!currentPatient.name) { alert('Chưa chọn bệnh nhân khám!'); return; }
 
         let clsList = getSelectedClsList();
         if (clsList.length === 0) { alert('Chưa chọn dịch vụ cận lâm sàng nào để in!'); return; }
 
-        currentPatient.cls = clsList.join('; ');
+        syncCurrentPatientClsToWaitingList(clsList.join('; '));
+        scheduleAutoSync(0);
 
         let today = new Date();
         let day = String(today.getDate()).padStart(2, '0');
@@ -1290,6 +1673,7 @@
 
             document.getElementById('includeExamFeeCheck').checked = false;
             calculateGrandTotal();
+            scheduleAutoSync(0);
 
             if (unavailableMeds.length > 0) {
                 let msg = `⚠️ THÔNG BÁO THUỐC TRONG KHO:\n\n`;
@@ -1298,7 +1682,7 @@
                 msg += `\n\n👉 Bạn hãy tự chọn thuốc thay thế khác trong danh mục kho!`;
                 alert(msg);
             } else {
-                alert('Đã nạp thành công toàn bộ thuốc từ toa cũ! (Đã tự động bỏ tiền khám 50.000đ)');
+                alert('Đã nạp thành công toàn bộ thuốc từ toa cũ! (Đã tự động bỏ tiền khám 30.000đ)');
             }
         } else {
             alert('Không tìm thấy dữ liệu đơn thuốc cũ!');
@@ -1308,9 +1692,8 @@
     function removeFromWaitingList(id) {
         if (confirm('Xóa bệnh nhân này khỏi danh sách chờ?')) {
             waitingList = waitingList.filter(w => w.id !== id);
-            localStorage.setItem('pk_waiting', JSON.stringify(waitingList));
             renderWaitingList();
-            saveToDrive();
+            scheduleAutoSync(0);
         }
     }
 
@@ -1338,23 +1721,7 @@
     function resetCurrentPatientForm() {
         currentPatient = {};
         prescriptionMeds = [];
-        document.getElementById('patientCode').value = '';
-        document.getElementById('patientName').value = '';
-        document.getElementById('patientDob').value = '';
-        document.getElementById('patientAge').value = '';
-        document.getElementById('patientAgeUnit').value = 'tuổi';
-        document.getElementById('patientGender').value = 'Nam';
-        document.getElementById('patientAddress').value = '';
-        document.getElementById('patientGuardian').value = '';
-        document.getElementById('patientPriority').checked = false;
-        document.getElementById('vitalBP').value = '';
-        document.getElementById('vitalPulse').value = '';
-        document.getElementById('vitalTemp').value = '';
-        document.getElementById('vitalResp').value = '';
-        document.getElementById('vitalWeight').value = '';
-        document.getElementById('vitalHeight').value = '';
-        document.getElementById('clinicalSymptoms').value = '';
-        document.getElementById('clsResults').value = '';
+        clearIntakeFormOnly();
         document.getElementById('prescriptionICD').value = '';
         document.getElementById('searchMedicine').value = '';
         document.getElementById('revisitDays').value = 0;
@@ -1368,6 +1735,7 @@
         document.getElementById('currentPatientBrief').innerText = 'Chưa chọn bệnh nhân. Vui lòng chọn ở tab "Chờ Khám".';
         document.getElementById('clsPatientBrief').innerText = 'Chưa chọn bệnh nhân. Vui lòng chọn ở tab "Chờ Khám".';
         renderPrescriptionTable();
+        scheduleAutoSync(0);
     }
 
     function saveMedicineToStock() {
@@ -1388,13 +1756,11 @@
         };
 
         stockData.push(item);
-        localStorage.setItem('pk_stock', JSON.stringify(stockData));
         renderStock();
-        saveToDrive();
-        alert('Đã lưu thuốc vào kho!');
-
         document.getElementById('stockTradeName').value = '';
         document.getElementById('stockActiveIng').value = '';
+        scheduleAutoSync(0);
+        alert('Đã lưu thuốc vào kho và tự động đồng bộ!');
     }
 
     function renderStock() {
@@ -1427,9 +1793,8 @@
     function deleteStock(index) {
         if (confirm('Xóa thuốc này khỏi kho?')) {
             stockData.splice(index, 1);
-            localStorage.setItem('pk_stock', JSON.stringify(stockData));
             renderStock();
-            saveToDrive();
+            scheduleAutoSync(0);
         }
     }
 
@@ -1439,11 +1804,10 @@
         if (!code || !name) { alert('Nhập đủ mã ICD và Tên bệnh!'); return; }
 
         icdData.push({ code, name });
-        localStorage.setItem('pk_icd', JSON.stringify(icdData));
         renderICD();
-        saveToDrive();
         document.getElementById('icdCode').value = '';
         document.getElementById('icdName').value = '';
+        scheduleAutoSync(0);
     }
 
     function renderICD() {
@@ -1469,9 +1833,8 @@
 
     function deleteICD(index) {
         icdData.splice(index, 1);
-        localStorage.setItem('pk_icd', JSON.stringify(icdData));
         renderICD();
-        saveToDrive();
+        scheduleAutoSync(0);
     }
 
     let selectedMedObj = null;
@@ -1524,6 +1887,7 @@
 
         document.getElementById('searchMedicine').value = '';
         selectedMedObj = null;
+        scheduleAutoSync(0);
     }
 
     function moveMedicineOrder(idx, direction) {
@@ -1537,6 +1901,7 @@
             prescriptionMeds[idx + 1] = temp;
         }
         renderPrescriptionTable();
+        scheduleAutoSync(0);
     }
 
     function renderPrescriptionTable() {
@@ -1571,11 +1936,12 @@
     function removePrescriptionMed(idx) {
         prescriptionMeds.splice(idx, 1);
         renderPrescriptionTable();
+        scheduleAutoSync(0);
     }
 
     function calculateGrandTotal() {
         let medSum = prescriptionMeds.reduce((acc, cur) => acc + cur.totalPrice, 0);
-        let examFee = document.getElementById('includeExamFeeCheck').checked ? 50000 : 0;
+        let examFee = document.getElementById('includeExamFeeCheck').checked ? 30000 : 0;
         let extraFee = document.getElementById('extraFeeCheck').checked ? 30000 : 0;
         let grandTotal = examFee + medSum + extraFee;
 
@@ -1594,7 +1960,6 @@
                 if (st) st.qty = Math.max(0, st.qty - m.qty);
             }
         });
-        localStorage.setItem('pk_stock', JSON.stringify(stockData));
         renderStock();
 
         let clsList = getSelectedClsList();
@@ -1606,7 +1971,7 @@
             id: Date.now(),
             date: new Date().toLocaleString('vi-VN'),
             recordYear: new Date().getFullYear(),
-            patient: currentPatient,
+            patient: {...currentPatient},
             icd: icdVal,
             meds: [...prescriptionMeds],
             totals: totals,
@@ -1615,18 +1980,16 @@
         };
 
         historyData.unshift(record);
-        localStorage.setItem('pk_history', JSON.stringify(historyData));
 
         if (currentPatient.id) {
             waitingList = waitingList.filter(w => w.id !== currentPatient.id);
-            localStorage.setItem('pk_waiting', JSON.stringify(waitingList));
             renderWaitingList();
         }
 
         renderHistory();
         updatePatientDatalist();
+        scheduleAutoSync(0); // Tự động đồng bộ ngay khi lưu hồ sơ khám
 
-        saveToDrive();
         return record;
     }
 
@@ -1644,7 +2007,7 @@
         if (!currentPatient.name) { alert('Chưa chọn bệnh nhân khám!'); return; }
 
         savePrescriptionRecord();
-        alert('Đã hoàn tất khám và lưu hồ sơ thành công!');
+        alert('Đã hoàn tất khám và tự động lưu lên Google Drive thành công!');
         resetCurrentPatientForm();
         showTab('cho-kham');
     }
@@ -1664,16 +2027,14 @@
                         if (st) st.qty += m.qty;
                     }
                 });
-                localStorage.setItem('pk_stock', JSON.stringify(stockData));
                 renderStock();
             }
 
             historyData.splice(index, 1);
-            localStorage.setItem('pk_history', JSON.stringify(historyData));
             renderHistory();
             updatePatientDatalist();
-            saveToDrive();
-            alert('Đã xóa toa thuốc và hoàn trả lại kho!');
+            scheduleAutoSync(0);
+            alert('Đã xóa toa thuốc, hoàn trả lại kho và tự động đồng bộ!');
         }
     }
 
