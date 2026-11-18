@@ -147,6 +147,36 @@
         .btn-danger:hover { background: #c62828; }
         .btn-sm { padding: 3px 8px; font-size: 12px; }
 
+        .icd-chips-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .icd-chip {
+            background: var(--primary-light);
+            color: var(--primary);
+            border: 1px solid var(--border);
+            padding: 4px 10px;
+            border-radius: 16px;
+            font-size: 13px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .icd-chip .remove-chip {
+            cursor: pointer;
+            font-weight: bold;
+            color: #c62828;
+            font-size: 16px;
+            line-height: 1;
+            padding: 0 2px;
+        }
+        .icd-chip .remove-chip:hover {
+            color: #b71c1c;
+        }
+
         .cls-category-title {
             font-size: 14px;
             font-weight: bold;
@@ -464,9 +494,14 @@
             <div class="card-title">CHẨN ĐOÁN, CHỌN THUỐC & HẸN TÁI KHÁM</div>
             <div class="form-grid">
                 <div class="form-group full">
-                    <label>Chẩn đoán bệnh / Mã ICD:</label>
-                    <input type="text" id="prescriptionICD" list="icdList" placeholder="Tìm tên bệnh hoặc mã ICD...">
+                    <label>Chọn / Thêm Chẩn đoán bệnh & Mã ICD (Có thể chọn nhiều chẩn đoán):</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="icdPickerInput" list="icdList" placeholder="Gõ tìm mã ICD hoặc tên bệnh để thêm liên tiếp..." style="flex: 1;" oninput="onIcdPickerInput(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault(); addDiagnosisFromPicker();}">
+                        <button class="btn" type="button" onclick="addDiagnosisFromPicker()">+ Thêm Chẩn Đoán</button>
+                    </div>
                     <datalist id="icdList"></datalist>
+                    <div id="selectedIcdChips" class="icd-chips-container"></div>
+                    <input type="text" id="prescriptionICD" placeholder="Danh sách chẩn đoán hiển thị trên đơn (ngăn cách bằng dấu ; có thể sửa trực tiếp)..." style="margin-top: 8px; background: #fff9fb; font-weight: 600;" oninput="syncChipsFromTextInput()">
                 </div>
                 <div class="form-group" style="grid-column: span 2;">
                     <label>Tìm kiếm chọn thuốc trong kho:</label>
@@ -744,6 +779,7 @@
     let waitingList = JSON.parse(localStorage.getItem('pk_waiting')) || [];
     let currentPatient = {};
     let prescriptionMeds = [];
+    let selectedDiagnoses = [];
 
     function setSyncUI(state, message) {
         const badge = document.getElementById('syncBadge');
@@ -775,7 +811,6 @@
                     document.getElementById('authBtn').style.display = 'inline-block';
                     return;
                 }
-                // Lưu token vào localStorage để tự động khôi phục khi F5 hoặc mở lại trang
                 const expiresIn = parseInt(resp.expires_in) || 3599;
                 const expiresAt = Date.now() + (expiresIn - 120) * 1000;
                 localStorage.setItem('pk_oauth_token', resp.access_token);
@@ -791,7 +826,6 @@
 
     function scheduleTokenAutoRefresh(expiresInSeconds) {
         if (tokenRefreshTimer) clearTimeout(tokenRefreshTimer);
-        // Tự động làm mới token trước khi hết hạn 3 phút
         const refreshDelayMs = Math.max(60, (expiresInSeconds - 180)) * 1000;
         tokenRefreshTimer = setTimeout(() => {
             if (tokenClient) {
@@ -802,7 +836,6 @@
 
     async function checkAuthInit() {
         if (gapiInited && gisInited) {
-            // Kiểm tra xem có token còn hạn trong máy không để tự kết nối luôn
             const savedToken = localStorage.getItem('pk_oauth_token');
             const expiresAt = parseInt(localStorage.getItem('pk_oauth_expires_at') || '0');
 
@@ -843,7 +876,6 @@
             });
 
             if (!res.ok) {
-                // Token hết hạn hoặc không hợp lệ
                 localStorage.removeItem('pk_oauth_token');
                 localStorage.removeItem('pk_oauth_expires_at');
                 document.getElementById('authBtn').style.display = 'inline-block';
@@ -871,7 +903,6 @@
         }
     }
 
-    // Gộp dữ liệu thông minh để không làm mất dữ liệu vừa nhập trên máy trước khi đăng nhập
     function mergeArraysByKey(driveArr, localArr, keyField) {
         const map = new Map();
         (driveArr || []).forEach(item => {
@@ -904,7 +935,6 @@
                 let data = fileRes.result;
                 if (data && typeof data === 'object') {
                     if (hasUnsyncedChanges) {
-                        // Nếu trên máy có dữ liệu mới nhập chưa kịp đẩy lên Drive -> Gộp cả 2 bên rồi lưu ngay lên Drive
                         stockData = mergeArraysByKey(data.stock, stockData, 'id');
                         icdData = mergeArraysByKey(data.icd, icdData, 'code');
                         historyData = mergeArraysByKey(data.history, historyData, 'id').sort((a, b) => b.id - a.id);
@@ -945,7 +975,86 @@
         }
     }
 
-    // Lưu trạng thái đang làm việc dở (Draft) để không mất khi thoát đột ngột
+    // --- QUẢN LÝ NHIỀU CHẨN ĐOÁN (MULTI-ICD) ---
+    function onIcdPickerInput(val) {
+        let trimmed = val.trim();
+        if (!trimmed) return;
+        let matched = icdData.some(item => `${item.code} - ${item.name}` === trimmed);
+        if (matched) {
+            addDiagnosisItem(trimmed);
+            document.getElementById('icdPickerInput').value = '';
+        }
+    }
+
+    function addDiagnosisFromPicker() {
+        let input = document.getElementById('icdPickerInput');
+        if (!input) return;
+        let val = input.value.trim();
+        if (!val) return;
+        addDiagnosisItem(val);
+        input.value = '';
+        input.focus();
+    }
+
+    function addDiagnosisItem(diagStr) {
+        let parts = diagStr.split(';').map(s => s.trim()).filter(Boolean);
+        parts.forEach(p => {
+            if (!selectedDiagnoses.some(existing => existing.toLowerCase() === p.toLowerCase())) {
+                selectedDiagnoses.push(p);
+            }
+        });
+        updateDiagnosisUIFromArray();
+        scheduleAutoSync(500);
+    }
+
+    function removeDiagnosisItem(index) {
+        selectedDiagnoses.splice(index, 1);
+        updateDiagnosisUIFromArray();
+        scheduleAutoSync(500);
+    }
+
+    function updateDiagnosisUIFromArray() {
+        const inputEl = document.getElementById('prescriptionICD');
+        if (inputEl) {
+            inputEl.value = selectedDiagnoses.join('; ');
+        }
+        renderDiagnosisChips();
+    }
+
+    function setDiagnosesFromString(str) {
+        const inputEl = document.getElementById('prescriptionICD');
+        if (inputEl) inputEl.value = str || '';
+        selectedDiagnoses = (str || '').split(';').map(s => s.trim()).filter(Boolean);
+        renderDiagnosisChips();
+    }
+
+    function syncChipsFromTextInput() {
+        const inputEl = document.getElementById('prescriptionICD');
+        if (!inputEl) return;
+        selectedDiagnoses = inputEl.value.split(';').map(s => s.trim()).filter(Boolean);
+        renderDiagnosisChips();
+    }
+
+    function renderDiagnosisChips() {
+        const container = document.getElementById('selectedIcdChips');
+        if (!container) return;
+        container.innerHTML = '';
+        selectedDiagnoses.forEach((diag, idx) => {
+            const chip = document.createElement('span');
+            chip.className = 'icd-chip';
+            const textSpan = document.createElement('span');
+            textSpan.textContent = diag;
+            const removeBtn = document.createElement('span');
+            removeBtn.className = 'remove-chip';
+            removeBtn.title = 'Xóa chẩn đoán này';
+            removeBtn.innerHTML = '&times;';
+            removeBtn.onclick = () => removeDiagnosisItem(idx);
+            chip.appendChild(textSpan);
+            chip.appendChild(removeBtn);
+            container.appendChild(chip);
+        });
+    }
+
     function buildDraftObject() {
         let selectedCls = [];
         document.querySelectorAll('.cls-checkbox:checked').forEach(cb => selectedCls.push(cb.value));
@@ -1022,7 +1131,7 @@
                 prescriptionMeds = draft.prescriptionMeds;
             }
             if (draft.prescriptionICD !== undefined) {
-                document.getElementById('prescriptionICD').value = draft.prescriptionICD;
+                setDiagnosesFromString(draft.prescriptionICD);
             }
             if (draft.revisitDays !== undefined) {
                 document.getElementById('revisitDays').value = draft.revisitDays;
@@ -1062,7 +1171,6 @@
         }
     }
 
-    // Điều phối tự động lưu có chống nghẽn (Debounce + Queue)
     function scheduleAutoSync(delayMs = 0) {
         saveAllToLocalStorage(true);
 
@@ -1091,18 +1199,16 @@
     function setupAutoSyncListeners() {
         const container = document.querySelector('.container');
         if (container) {
-            // Bất kỳ thao tác gõ phím hoặc chọn ô nào cũng tự lưu sau 0.8s ngừng gõ
             container.addEventListener('input', (e) => {
-                if (e.target && e.target.id === 'historySearch') return;
+                if (e.target && (e.target.id === 'historySearch' || e.target.id === 'icdPickerInput')) return;
                 scheduleAutoSync(800);
             });
             container.addEventListener('change', (e) => {
-                if (e.target && e.target.id === 'historySearch') return;
+                if (e.target && (e.target.id === 'historySearch' || e.target.id === 'icdPickerInput')) return;
                 scheduleAutoSync(500);
             });
         }
 
-        // Khi người dùng chuyển tab hoặc thu nhỏ trình duyệt -> Đẩy dữ liệu lên Drive ngay lập tức
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden' && (hasUnsyncedChanges || autoSyncTimer)) {
                 if (autoSyncTimer) {
@@ -1113,7 +1219,6 @@
             }
         });
 
-        // Khi người dùng bấm đóng tab -> Đẩy dữ liệu với cờ keepalive để chạy ngầm
         window.addEventListener('beforeunload', (e) => {
             saveAllToLocalStorage(hasUnsyncedChanges);
             if (hasUnsyncedChanges || autoSyncTimer || isSyncing) {
@@ -1123,7 +1228,6 @@
                 }
                 saveToDrive(true);
 
-                // Nếu file lớn hơn 60KB và đang tải dở thì nhắc người dùng chờ 1 giây
                 const payloadSize = new Blob([JSON.stringify({ stock: stockData, icd: icdData, history: historyData, waiting: waitingList })]).size;
                 if (gapi.client && gapi.client.getToken() && payloadSize >= 60000) {
                     e.preventDefault();
@@ -1137,7 +1241,6 @@
     async function saveToDrive(isUrgentExit = false) {
         if (!gapiInited || !gapi.client || !gapi.client.getToken()) return;
 
-        // Nếu đang có 1 tiến trình lưu đang chạy và đây không phải là lúc thoát khẩn cấp, xếp vào hàng đợi
         if (isSyncing && !isUrgentExit) {
             pendingSyncAfterCurrent = true;
             return;
@@ -1157,7 +1260,6 @@
 
             let fileContent = JSON.stringify(dbContent);
             let payloadSize = new Blob([fileContent]).size;
-            // Trình duyệt cho phép keepalive tối đa 64KB để chạy ngầm ngay cả khi đã đóng tab
             let canKeepAlive = payloadSize < 60000;
             let token = gapi.client.getToken().access_token;
 
@@ -1173,14 +1275,12 @@
                 });
 
                 if (res.status === 401) {
-                    // Token hết hạn giữa chừng -> Tự động yêu cầu cấp lại
                     if (tokenClient && !isUrgentExit) {
                         tokenClient.requestAccessToken({ prompt: '', login_hint: ALLOWED_EMAIL });
                     }
                     throw new Error('Token hết hạn (401)');
                 }
                 if (res.status === 404) {
-                    // Nếu file cũ trên Drive bị xóa thì tạo mới
                     driveFileId = null;
                     localStorage.removeItem('pk_drive_file_id');
                     isSyncing = false;
@@ -1420,7 +1520,7 @@
         waitingList.push(pData);
         clearIntakeFormOnly();
         renderWaitingList();
-        scheduleAutoSync(0); // Tự động đồng bộ ngay lập tức
+        scheduleAutoSync(0);
 
         alert(`Đã lưu bệnh nhân [${code}] vào danh sách Hàng Chờ Khám!`);
         showTab('cho-kham');
@@ -1529,7 +1629,7 @@
         if (clsList.length === 0) { alert('Chưa chọn hoặc nhập chỉ định Cận lâm sàng nào!'); return; }
 
         syncCurrentPatientClsToWaitingList(clsList.join('; '));
-        scheduleAutoSync(0); // Tự động lưu CLS vào bệnh án và đồng bộ lên Drive ngay
+        scheduleAutoSync(0);
         alert('Đã lưu chỉ định Cận lâm sàng vào bệnh án và đồng bộ thành công!');
     }
 
@@ -1667,7 +1767,7 @@
                 }
             });
 
-            document.getElementById('prescriptionICD').value = record.icd || '';
+            setDiagnosesFromString(record.icd || '');
             prescriptionMeds = loadedMeds;
             renderPrescriptionTable();
 
@@ -1722,7 +1822,10 @@
         currentPatient = {};
         prescriptionMeds = [];
         clearIntakeFormOnly();
-        document.getElementById('prescriptionICD').value = '';
+        setDiagnosesFromString('');
+        if (document.getElementById('icdPickerInput')) {
+            document.getElementById('icdPickerInput').value = '';
+        }
         document.getElementById('searchMedicine').value = '';
         document.getElementById('revisitDays').value = 0;
         updateRevisitDateText();
@@ -1950,6 +2053,13 @@
     }
 
     function savePrescriptionRecord() {
+        // Nếu ô chọn nhanh còn chữ mà bác sĩ quên bấm "+ Thêm", tự động gộp vào luôn
+        let pendingPicker = document.getElementById('icdPickerInput');
+        if (pendingPicker && pendingPicker.value.trim()) {
+            addDiagnosisItem(pendingPicker.value.trim());
+            pendingPicker.value = '';
+        }
+
         let totals = calculateGrandTotal();
         let icdVal = document.getElementById('prescriptionICD').value;
         let revisitInfo = updateRevisitDateText();
@@ -1988,7 +2098,7 @@
 
         renderHistory();
         updatePatientDatalist();
-        scheduleAutoSync(0); // Tự động đồng bộ ngay khi lưu hồ sơ khám
+        scheduleAutoSync(0);
 
         return record;
     }
