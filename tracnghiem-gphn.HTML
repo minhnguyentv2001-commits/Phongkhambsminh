@@ -1,0 +1,4378 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trắc Nghiệm Sắc Màu — Học Tập &amp; Ngân Hàng Câu Hỏi Theo Bài</title>
+
+  <!-- Tải Tailwind CSS để hỗ trợ bố cục linh hoạt và responsive -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Identity Services & Google Drive API (Đồng bộ đa thiết bị giống app Phòng Khám) -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js" async defer></script>
+
+  <!-- CSS tùy chỉnh bắt buộc font Times New Roman, cỡ chữ 18px và hiệu ứng sắc màu -->
+  <style id="app-custom-styles">
+    /* Bắt buộc toàn bộ trang web sử dụng Times New Roman */
+    *, *::before, *::after {
+      font-family: 'Times New Roman', Times, serif !important;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-size: 18px;
+      line-height: 1.55;
+      color: #1e1b4b;
+      overflow-x: hidden;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #fff0f6 0%, #f3e8ff 28%, #e0f2fe 62%, #fef9c3 100%);
+      background-attachment: fixed;
+    }
+
+    /* Đảm bảo các phần tử nhập liệu và nút bấm dùng chuẩn 18px */
+    input, textarea, select, button {
+      font-size: 18px;
+      line-height: 1.45;
+    }
+
+    /* Hiệu ứng nền trang trí mềm mại */
+    .bg-orb {
+      position: fixed;
+      border-radius: 9999px;
+      filter: blur(70px);
+      opacity: 0.45;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .bg-orb-1 {
+      width: 340px;
+      height: 340px;
+      background: #f472b6;
+      top: -80px;
+      left: -80px;
+    }
+
+    .bg-orb-2 {
+      width: 380px;
+      height: 380px;
+      background: #38bdf8;
+      bottom: -100px;
+      right: -80px;
+    }
+
+    .bg-orb-3 {
+      width: 280px;
+      height: 280px;
+      background: #c084fc;
+      top: 42%;
+      right: 12%;
+    }
+
+    /* Thẻ kính nổi bật */
+    .colorful-card {
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(12px);
+      border: 2px solid rgba(255, 255, 255, 0.9);
+      box-shadow: 0 14px 36px -10px rgba(109, 40, 217, 0.16), 0 4px 12px -2px rgba(236, 72, 153, 0.10);
+    }
+
+    /* Banner đầu trang rực rỡ */
+    .hero-gradient {
+      background: linear-gradient(120deg, #db2777 0%, #7c3aed 45%, #0284c7 85%, #14b8a6 100%);
+    }
+
+    /* Huy hiệu 4 đáp án A, B, C, D rực rỡ trước khi chọn */
+    .badge-A { background: linear-gradient(135deg, #f43f5e, #ec4899); color: #ffffff; }
+    .badge-B { background: linear-gradient(135deg, #2563eb, #06b6d4); color: #ffffff; }
+    .badge-C { background: linear-gradient(135deg, #f97316, #eab308); color: #ffffff; }
+    .badge-D { background: linear-gradient(135deg, #9333ea, #6366f1); color: #ffffff; }
+
+    /* Viền hover sinh động cho từng đáp án */
+    .option-card {
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.2s ease, background-color 0.2s ease;
+    }
+    .option-card:not(:disabled):hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 22px -8px rgba(124, 58, 237, 0.25);
+    }
+    .option-card-A:not(:disabled):hover { border-color: #ec4899; background-color: #fdf2f8; }
+    .option-card-B:not(:disabled):hover { border-color: #0ea5e9; background-color: #f0f9ff; }
+    .option-card-C:not(:disabled):hover { border-color: #f59e0b; background-color: #fffbeb; }
+    .option-card-D:not(:disabled):hover { border-color: #8b5cf6; background-color: #f5f3ff; }
+
+    /* Trạng thái ĐÚNG - Xanh lá nổi bật */
+    .option-correct {
+      background-color: #dcfce7 !important;
+      border-color: #16a34a !important;
+      color: #14532d !important;
+      box-shadow: 0 8px 20px -6px rgba(22, 163, 74, 0.35) !important;
+      animation: popCorrect 0.35s ease;
+    }
+    .option-correct .option-badge {
+      background: linear-gradient(135deg, #16a34a, #22c55e) !important;
+      color: #ffffff !important;
+    }
+
+    /* Trạng thái SAI - Đỏ nổi bật */
+    .option-wrong {
+      background-color: #fee2e2 !important;
+      border-color: #dc2626 !important;
+      color: #7f1d1d !important;
+      box-shadow: 0 8px 20px -6px rgba(220, 38, 38, 0.35) !important;
+      animation: shakeWrong 0.38s ease;
+    }
+    .option-wrong .option-badge {
+      background: linear-gradient(135deg, #dc2626, #ef4444) !important;
+      color: #ffffff !important;
+    }
+
+    /* Trạng thái các đáp án còn lại sau khi đã khóa */
+    .option-muted {
+      opacity: 0.65;
+      background-color: #f8fafc;
+      border-color: #e2e8f0;
+    }
+
+    /* Nút bấm hiệu ứng nổi đẹp mắt */
+    .btn-vibrant {
+      transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+    }
+    .btn-vibrant:hover:not(:disabled) {
+      transform: translateY(-1px);
+      filter: brightness(1.05);
+    }
+    .btn-vibrant:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+    .btn-vibrant:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Hoạt ảnh mượt mà */
+    @keyframes popCorrect {
+      0% { transform: scale(0.98); }
+      50% { transform: scale(1.02); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes shakeWrong {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-6px); }
+      45% { transform: translateX(6px); }
+      70% { transform: translateX(-4px); }
+      85% { transform: translateX(4px); }
+    }
+
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-fade-up {
+      animation: fadeSlideUp 0.28s ease-out;
+    }
+
+    /* Thanh cuộn tinh tế */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(243, 232, 255, 0.6);
+      border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, #ec4899, #8b5cf6);
+      border-radius: 999px;
+    }
+  </style>
+</head>
+<body class="antialiased selection:bg-pink-200 selection:text-purple-900">
+  <!-- Nền ánh sáng trang trí -->
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+  <div class="bg-orb bg-orb-3"></div>
+
+  <!-- Danh sách gợi ý tên bài học dùng chung cho các ô nhập -->
+  <datalist id="lesson-suggestions"></datalist>
+
+  <!-- Khung nội dung chính -->
+  <div class="relative z-10 max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-7">
+
+    <!-- PHẦN ĐẦU TRANG (HEADER) -->
+    <header class="hero-gradient rounded-3xl p-5 sm:p-7 text-white shadow-xl mb-6 relative overflow-hidden">
+      <!-- Họa tiết tròn trang trí trong banner -->
+      <div class="absolute -top-10 -right-10 w-44 h-44 bg-white/15 rounded-full pointer-events-none"></div>
+      <div class="absolute -bottom-12 left-1/3 w-36 h-36 bg-yellow-300/20 rounded-full pointer-events-none"></div>
+
+      <div class="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <div class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3.5 py-1 rounded-full text-[16px] font-bold tracking-wide mb-2">
+            <span>✨</span>
+            <span>Học Tập Thông Minh &amp; Phân Loại Theo Bài</span>
+          </div>
+          <h1 class="text-[28px] sm:text-[34px] font-bold leading-tight drop-shadow-sm">
+            Trắc Nghiệm Sắc Màu
+          </h1>
+          <p class="text-[18px] text-white/95 mt-1">
+            Luyện tập từng câu theo từng bài — Quản lý, đính kèm ảnh &amp; tự cập nhật vào code
+          </p>
+        </div>
+
+        <!-- Trạng thái tự động lưu và nút xuất nhanh -->
+        <div class="flex flex-col items-start md:items-end gap-2.5 shrink-0">
+          <div id="sync-status-badge" class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/95 text-emerald-800 font-bold text-[17px] shadow-md">
+            <span id="sync-status-dot" class="w-3 h-3 rounded-full bg-amber-500 animate-pulse"></span>
+            <span id="sync-status-text">Đang khởi tạo dữ liệu...</span>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button
+              id="header-gdrive-auth-btn"
+              type="button"
+              class="btn-vibrant inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-white text-purple-900 font-bold text-[17px] shadow-lg border-2 border-white cursor-pointer"
+              title="Đăng nhập Google Drive để tự động đồng bộ giữa Laptop và Điện thoại"
+            >
+              <span>🔐</span>
+              <span>Đăng nhập Google Drive</span>
+            </button>
+            <button
+              id="header-gdrive-sync-btn"
+              type="button"
+              class="hidden btn-vibrant inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-emerald-500 text-white font-bold text-[17px] shadow-lg border-2 border-white/80 cursor-pointer"
+              title="Đồng bộ thủ công ngay với Google Drive"
+            >
+              <span>🔄</span>
+              <span>Đồng bộ Drive</span>
+            </button>
+            <button
+              id="header-cloud-sync-btn"
+              type="button"
+              class="btn-vibrant inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white/20 text-white hover:bg-white/30 font-bold text-[17px] shadow-md border-2 border-white/60 cursor-pointer"
+              title="Cài đặt đồng bộ Google Drive & Đồng bộ qua file JSON"
+            >
+              <span>☁️</span>
+              <span>Cài đặt đồng bộ</span>
+            </button>
+            <button
+              id="header-download-html-btn"
+              type="button"
+              class="btn-vibrant inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400 text-purple-950 font-bold text-[17px] shadow-lg border-2 border-white/80 cursor-pointer"
+              title="Tải xuống file HTML mới đã tích hợp toàn bộ câu hỏi và danh sách bài học vào trong code"
+            >
+              <span>💾</span>
+              <span>Tải file HTML đã cập nhật code</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Thanh chuyển đổi 2 chế độ chính -->
+      <nav class="relative z-10 mt-6 flex flex-wrap gap-3" aria-label="Chuyển đổi chế độ">
+        <button
+          id="tab-btn-quiz"
+          type="button"
+          class="btn-vibrant flex-1 sm:flex-none px-6 py-3 rounded-2xl font-bold text-[18px] flex items-center justify-center gap-2 bg-white text-purple-800 shadow-lg border-2 border-white cursor-pointer"
+        >
+          <span>🎯</span>
+          <span>Làm bài trắc nghiệm</span>
+          <span id="tab-quiz-count" class="ml-1 px-2.5 py-0.5 rounded-full bg-pink-100 text-pink-700 text-[16px]">0</span>
+        </button>
+        <button
+          id="tab-btn-bank"
+          type="button"
+          class="btn-vibrant flex-1 sm:flex-none px-6 py-3 rounded-2xl font-bold text-[18px] flex items-center justify-center gap-2 bg-white/20 text-white hover:bg-white/30 border-2 border-white/50 cursor-pointer"
+        >
+          <span>📚</span>
+          <span>Ngân hàng câu hỏi</span>
+          <span id="tab-bank-count" class="ml-1 px-2.5 py-0.5 rounded-full bg-white/25 text-white text-[16px]">0</span>
+        </button>
+      </nav>
+    </header>
+
+    <!-- BANNER NHẮC LƯU KHI CHẠY NGOẠI TUYẾN CÓ THAY ĐỔI CHƯA GHI VÀO FILE HTML -->
+    <div id="unsaved-local-banner" class="hidden mb-6 p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-amber-100 via-orange-100 to-rose-100 border-2 border-orange-400 shadow-lg animate-fade-up">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div class="flex items-start gap-3">
+          <span class="text-2xl shrink-0">⚠️</span>
+          <div class="text-[18px] text-orange-950">
+            <strong>Thay đổi mới chỉ lưu tạm trên máy này — chưa đồng bộ Google Drive!</strong>
+            <p class="text-[17px] text-orange-900 mt-0.5">
+              Hãy bấm <strong>Đăng nhập Google Drive</strong> ở góc trên để tự động đồng bộ mọi thiết bị, hoặc nhấn <strong>Tải file HTML mới</strong> trước khi thoát.
+            </p>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2 shrink-0">
+          <button
+            id="banner-link-file-btn"
+            type="button"
+            class="btn-vibrant px-4 py-2 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-[17px] shadow-md cursor-pointer"
+          >
+            🔗 Liên kết file tự lưu
+          </button>
+          <button
+            id="banner-download-html-btn"
+            type="button"
+            class="btn-vibrant px-4 py-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold text-[17px] shadow-md cursor-pointer"
+          >
+            💾 Tải file HTML mới
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- TAB 1: CHẾ ĐỘ LÀM BÀI TRẮC NGHIỆM                         -->
+    <!-- ========================================================= -->
+    <main id="panel-quiz" class="space-y-5">
+
+      <!-- Bộ chọn Bài học / Chủ đề để làm trắc nghiệm -->
+      <section class="colorful-card rounded-3xl p-4 sm:p-5 border-2 border-sky-200 bg-gradient-to-r from-white via-purple-50/70 to-sky-50/80">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div class="flex items-center gap-2.5">
+            <span class="text-2xl">📖</span>
+            <div>
+              <label for="quiz-lesson-select" class="font-bold text-purple-950 text-[19px] block">
+                Chọn bài học để làm trắc nghiệm:
+              </label>
+              <span class="text-[16px] text-purple-800/80">Bạn có thể luyện riêng từng bài hoặc trộn tất cả các bài</span>
+            </div>
+          </div>
+          <div class="w-full md:w-80">
+            <select
+              id="quiz-lesson-select"
+              class="w-full px-4 py-2.5 rounded-2xl border-2 border-purple-300 focus:border-pink-500 focus:outline-none bg-white text-purple-950 font-bold text-[18px] shadow-sm cursor-pointer"
+            >
+              <option value="ALL">🌈 Tất cả các bài (0 câu)</option>
+            </select>
+          </div>
+        </div>
+        <!-- Dãy thẻ chọn nhanh từng bài -->
+        <div id="quiz-lesson-chips" class="flex flex-wrap gap-2 mt-3.5 pt-3 border-t border-purple-200/70"></div>
+      </section>
+
+      <!-- Thẻ tiến độ & Thống kê trực tiếp -->
+      <section class="colorful-card rounded-3xl p-4 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div class="flex flex-wrap items-center gap-2.5">
+            <span id="quiz-counter-badge" class="px-4 py-1.5 rounded-full bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-[18px] shadow-sm">
+              Câu 1 / 5
+            </span>
+            <span id="review-mode-badge" class="hidden px-4 py-1.5 rounded-full bg-gradient-to-r from-orange-500 to-rose-500 text-white font-bold text-[17px] shadow-sm">
+              🔥 Chế độ ôn lại câu làm sai
+            </span>
+          </div>
+
+          <!-- Bảng thống kê Đúng / Sai / Chưa làm -->
+          <div class="flex flex-wrap items-center gap-2.5">
+            <div class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl bg-green-100 border-2 border-green-400 text-green-800 font-bold text-[18px]">
+              <span>✓ Đúng:</span>
+              <span id="stat-correct">0</span>
+            </div>
+            <div class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl bg-red-100 border-2 border-red-400 text-red-800 font-bold text-[18px]">
+              <span>✗ Sai:</span>
+              <span id="stat-wrong">0</span>
+            </div>
+            <div class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl bg-sky-100 border-2 border-sky-400 text-sky-800 font-bold text-[18px]">
+              <span>⏳ Còn lại:</span>
+              <span id="stat-remaining">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Thanh tiến độ sắc màu -->
+        <div class="w-full h-4 bg-purple-100 rounded-full overflow-hidden border border-purple-200 p-0.5">
+          <div
+            id="quiz-progress-bar"
+            class="h-full rounded-full transition-all duration-500 ease-out"
+            style="width: 0%; background: linear-gradient(90deg, #ec4899 0%, #8b5cf6 45%, #0ea5e9 75%, #10b981 100%);"
+          ></div>
+        </div>
+        <div class="flex justify-between items-center mt-1.5 text-[16px] text-purple-800 font-semibold">
+          <span id="quiz-progress-label">Đã hoàn thành: 0 / 0 câu</span>
+          <span id="quiz-percent-label">0%</span>
+        </div>
+
+        <!-- Dãy nút số thứ tự các câu hỏi -->
+        <div class="mt-4 pt-4 border-t-2 border-purple-100">
+          <div class="text-[17px] font-bold text-purple-900 mb-2.5 flex items-center justify-between flex-wrap gap-2">
+            <span>📌 Chuyển nhanh giữa các câu hỏi:</span>
+            <button
+              id="btn-exit-review-mode"
+              type="button"
+              class="hidden btn-vibrant px-3.5 py-1 rounded-xl bg-sky-100 text-sky-800 border border-sky-300 font-bold text-[16px] cursor-pointer"
+            >
+              ↩ Quay lại toàn bộ câu hỏi của bài
+            </button>
+          </div>
+          <div id="question-nav-dots" class="flex flex-wrap gap-2">
+            <!-- Nút số thứ tự sẽ được tạo bằng JavaScript -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Thẻ hiển thị câu hỏi hiện tại (hỗ trợ vuốt ngang trên cảm ứng) -->
+      <section id="quiz-question-card" class="colorful-card rounded-3xl p-5 sm:p-8 relative overflow-hidden">
+        <!-- Dải màu trang trí đầu thẻ -->
+        <div class="absolute top-0 left-0 right-0 h-2" style="background: linear-gradient(90deg, #ec4899, #f59e0b, #10b981, #0ea5e9, #8b5cf6);"></div>
+
+        <!-- Nội dung câu hỏi sẽ được render tại đây -->
+        <div id="quiz-active-content" class="animate-fade-up"></div>
+
+        <!-- Trạng thái trống khi chưa có câu hỏi nào -->
+        <div id="quiz-empty-state" class="hidden text-center py-10">
+          <div class="text-5xl mb-3">📝</div>
+          <h2 class="text-[24px] font-bold text-purple-900 mb-2">Chưa có câu hỏi nào trong mục đang chọn!</h2>
+          <p class="text-[18px] text-slate-700 mb-6">
+            Hãy chuyển sang mục <strong>Ngân hàng câu hỏi</strong> để thêm câu hỏi mới, chọn bài khác hoặc nạp bộ câu hỏi mẫu.
+          </p>
+          <div class="flex flex-wrap justify-center gap-3">
+            <button
+              id="btn-go-to-bank-empty"
+              type="button"
+              class="btn-vibrant px-6 py-3 rounded-2xl bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold text-[18px] shadow-md cursor-pointer"
+            >
+              ➕ Mở Ngân hàng câu hỏi
+            </button>
+            <button
+              id="btn-restore-sample-empty"
+              type="button"
+              class="btn-vibrant px-6 py-3 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold text-[18px] shadow-md cursor-pointer"
+            >
+              ✨ Khôi phục câu mẫu
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Thẻ tổng kết khi hoàn thành toàn bộ bài làm -->
+      <section id="quiz-summary-card" class="hidden colorful-card rounded-3xl p-6 sm:p-8 border-2 border-emerald-300 bg-gradient-to-br from-white via-emerald-50/70 to-sky-50/80 animate-fade-up">
+        <div class="text-center">
+          <div id="summary-emoji" class="text-5xl mb-2">🎉</div>
+          <h2 class="text-[26px] font-bold text-purple-900 mb-2">Hoàn thành bài trắc nghiệm!</h2>
+          <p id="summary-message" class="text-[18px] text-slate-800 mb-5"></p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto mb-6">
+            <div class="p-4 rounded-2xl bg-green-100 border-2 border-green-400">
+              <div class="text-[17px] text-green-900 font-bold">Số câu đúng</div>
+              <div id="summary-correct" class="text-[28px] font-bold text-green-700">0</div>
+            </div>
+            <div class="p-4 rounded-2xl bg-red-100 border-2 border-red-400">
+              <div class="text-[17px] text-red-900 font-bold">Số câu sai</div>
+              <div id="summary-wrong" class="text-[28px] font-bold text-red-700">0</div>
+            </div>
+            <div class="p-4 rounded-2xl bg-purple-100 border-2 border-purple-400">
+              <div class="text-[17px] text-purple-900 font-bold">Tỷ lệ chính xác</div>
+              <div id="summary-accuracy" class="text-[28px] font-bold text-purple-700">0%</div>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap justify-center gap-3">
+            <button
+              id="btn-review-wrong"
+              type="button"
+              class="hidden btn-vibrant px-6 py-3 rounded-2xl bg-gradient-to-r from-rose-500 to-orange-500 text-white font-bold text-[18px] shadow-lg cursor-pointer"
+            >
+              🔥 Ôn lại câu làm sai
+            </button>
+            <button
+              id="btn-summary-restart"
+              type="button"
+              class="btn-vibrant px-6 py-3 rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-bold text-[18px] shadow-lg cursor-pointer"
+            >
+              🔄 Làm lại từ đầu
+            </button>
+            <button
+              id="btn-summary-shuffle"
+              type="button"
+              class="btn-vibrant px-6 py-3 rounded-2xl bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white font-bold text-[18px] shadow-lg cursor-pointer"
+            >
+              🔀 Trộn đề &amp; làm lại
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Thanh nút điều khiển làm bài -->
+      <section class="colorful-card rounded-3xl p-4 sm:p-5">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <!-- Điều hướng Trước / Sau -->
+          <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+            <button
+              id="btn-prev-question"
+              type="button"
+              class="btn-vibrant flex-1 sm:flex-none px-5 py-3 rounded-2xl bg-gradient-to-r from-indigo-500 to-sky-500 text-white font-bold text-[18px] shadow-md cursor-pointer"
+            >
+              ⬅ Câu trước
+            </button>
+            <button
+              id="btn-next-question"
+              type="button"
+              class="btn-vibrant flex-1 sm:flex-none px-5 py-3 rounded-2xl bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold text-[18px] shadow-md cursor-pointer"
+            >
+              Câu tiếp theo ➡
+            </button>
+          </div>
+
+          <!-- Tiện ích Trộn & Làm lại -->
+          <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">
+            <button
+              id="btn-shuffle-quiz"
+              type="button"
+              class="btn-vibrant flex-1 sm:flex-none px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold text-[18px] shadow-md cursor-pointer"
+            >
+              🔀 Trộn câu hỏi
+            </button>
+            <button
+              id="btn-restart-quiz"
+              type="button"
+              class="btn-vibrant flex-1 sm:flex-none px-5 py-3 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold text-[18px] shadow-md cursor-pointer"
+            >
+              🔄 Làm lại từ đầu
+            </button>
+          </div>
+        </div>
+        <p class="mt-3 text-[16px] text-purple-800/80 text-center sm:text-left">
+          💡 Mẹo: Bạn có thể nhấn phím <strong>A, B, C, D</strong> để chọn nhanh đáp án, phím mũi tên <strong>← / →</strong> (hoặc vuốt ngang trên điện thoại) để chuyển câu.
+        </p>
+      </section>
+    </main>
+
+    <!-- ========================================================= -->
+    <!-- TAB 2: NGÂN HÀNG CÂU HỎI & CẬP NHẬT VÀO CODE              -->
+    <!-- ========================================================= -->
+    <main id="panel-bank" class="hidden space-y-6">
+
+      <!-- Khu vực Lưu trữ & Xuất code nổi bật -->
+      <section class="colorful-card rounded-3xl p-5 sm:p-6 border-2 border-amber-300 bg-gradient-to-r from-amber-50/90 via-pink-50/90 to-sky-50/90">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-[22px] font-bold text-purple-950 flex items-center gap-2">
+              <span>⚡</span>
+              <span>Lưu Vĩnh Viễn &amp; Cập Nhật Trực Tiếp Vào Code</span>
+            </h2>
+            <p class="text-[18px] text-slate-800 mt-1">
+              Mọi thay đổi đều tự động lưu. Khi muốn chuyển sang điện thoại/máy khác, hãy nhấn <strong>"Tải file HTML đã cập nhật code"</strong> và gửi file vừa tải — điện thoại sẽ tự nhận diện phiên bản mới nhất!
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-2.5 shrink-0">
+            <button
+              id="bank-cloud-sync-btn"
+              type="button"
+              class="btn-vibrant px-5 py-3 rounded-2xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 text-white font-bold text-[18px] shadow-lg cursor-pointer"
+              title="Đồng bộ tự động qua Google Drive hoặc đồng bộ nhanh qua file JSON"
+            >
+              ☁️ Đồng bộ Google Drive
+            </button>
+            <button
+              id="btn-link-html-file"
+              type="button"
+              class="btn-vibrant px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-[18px] shadow-lg cursor-pointer"
+              title="Chọn file HTML trên máy 1 lần để mọi thao tác thêm/sửa/xóa tự động ghi đè thẳng vào code"
+            >
+              🔗 Liên kết file HTML (Tự lưu vào code)
+            </button>
+            <button
+              id="bank-download-html-btn"
+              type="button"
+              class="btn-vibrant px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white font-bold text-[18px] shadow-lg cursor-pointer"
+            >
+              💾 Tải file HTML đã cập nhật code
+            </button>
+            <button
+              id="btn-reload-from-file"
+              type="button"
+              class="btn-vibrant px-4 py-3 rounded-2xl bg-white border-2 border-indigo-400 text-indigo-800 font-bold text-[18px] shadow-sm cursor-pointer"
+              title="Xóa bộ nhớ tạm trình duyệt và nạp lại đúng danh sách câu hỏi đang nằm trong file HTML này"
+            >
+              🔄 Nạp lại từ code gốc của file
+            </button>
+            <button
+              id="btn-copy-code-snippet"
+              type="button"
+              class="btn-vibrant px-4 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-[18px] shadow-md cursor-pointer"
+            >
+              📋 Sao chép đoạn code câu hỏi
+            </button>
+            <button
+              id="btn-export-json"
+              type="button"
+              class="btn-vibrant px-4 py-3 rounded-2xl bg-white border-2 border-sky-400 text-sky-800 font-bold text-[18px] shadow-sm cursor-pointer"
+            >
+              ⬇ Xuất JSON
+            </button>
+            <button
+              id="btn-import-json"
+              type="button"
+              class="btn-vibrant px-4 py-3 rounded-2xl bg-white border-2 border-pink-400 text-pink-800 font-bold text-[18px] shadow-sm cursor-pointer"
+            >
+              ⬆ Nhập JSON
+            </button>
+            <input id="input-import-json" type="file" accept=".json,application/json" class="hidden" />
+          </div>
+        </div>
+      </section>
+
+      <!-- Quản lý danh mục Bài học / Chủ đề -->
+      <section class="colorful-card rounded-3xl p-5 sm:p-6 border-2 border-purple-200">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 class="text-[22px] font-bold text-purple-950 flex items-center gap-2">
+              <span>🗂️</span>
+              <span>Quản lý các Bài học / Chủ đề</span>
+            </h2>
+            <p class="text-[17px] text-slate-700 mt-0.5">
+              Tạo bài mới (ví dụ: <em>Ho ra máu</em>, <em>Rối loạn phát triển ở trẻ em</em>...), đổi tên bài hoặc lọc nhanh câu hỏi theo từng bài.
+            </p>
+          </div>
+          <div class="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+            <input
+              id="input-new-lesson-name"
+              type="text"
+              placeholder="Nhập tên bài mới (vd: Ho ra máu)..."
+              class="flex-1 md:w-72 px-4 py-2.5 rounded-2xl border-2 border-purple-200 focus:border-pink-500 focus:outline-none bg-white text-[18px]"
+            />
+            <button
+              id="btn-add-lesson"
+              type="button"
+              class="btn-vibrant px-5 py-2.5 rounded-2xl bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white font-bold text-[18px] shadow-md cursor-pointer shrink-0"
+            >
+              ➕ Tạo bài mới
+            </button>
+          </div>
+        </div>
+
+        <!-- Danh sách thẻ bài học -->
+        <div id="bank-lessons-manager" class="flex flex-wrap gap-2.5"></div>
+      </section>
+
+      <!-- Biểu mẫu thêm / sửa câu hỏi trực tiếp -->
+      <section id="question-form-section" class="colorful-card rounded-3xl p-5 sm:p-7 relative overflow-hidden">
+        <div class="absolute top-0 left-0 right-0 h-2" style="background: linear-gradient(90deg, #ec4899, #8b5cf6, #0ea5e9);"></div>
+
+        <!-- Chuyển nhanh giữa Nhập từng câu & Nhập nhanh nhiều câu -->
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+          <h2 id="form-heading" class="text-[23px] font-bold text-purple-950 flex items-center gap-2">
+            <span>✍️</span>
+            <span>Thêm câu hỏi mới trực tiếp</span>
+          </h2>
+          <div class="flex gap-2 bg-purple-100/80 p-1.5 rounded-2xl">
+            <button
+              id="subtab-single-btn"
+              type="button"
+              class="btn-vibrant px-4 py-2 rounded-xl bg-white text-purple-900 font-bold text-[17px] shadow-sm cursor-pointer"
+            >
+              ➕ Nhập từng câu
+            </button>
+            <button
+              id="subtab-bulk-btn"
+              type="button"
+              class="btn-vibrant px-4 py-2 rounded-xl text-purple-800 font-bold text-[17px] cursor-pointer"
+            >
+              ⚡ Nhập nhanh nhiều câu
+            </button>
+          </div>
+        </div>
+
+        <!-- FORM 1: NHẬP / SỬA TỪNG CÂU -->
+        <form id="single-question-form" class="space-y-5">
+          <input type="hidden" id="editing-question-id" value="" />
+
+          <!-- Thuộc bài học nào -->
+          <div class="p-4 rounded-2xl bg-gradient-to-r from-sky-50/90 to-purple-50/90 border-2 border-sky-200">
+            <label for="input-question-lesson" class="block font-bold text-purple-950 text-[18px] mb-1.5">
+              📖 Thuộc bài học / chủ đề <span class="text-rose-600">*</span>
+            </label>
+            <input
+              id="input-question-lesson"
+              type="text"
+              list="lesson-suggestions"
+              required
+              placeholder="Ví dụ: Ho ra máu"
+              class="w-full p-3 rounded-xl border-2 border-sky-200 focus:border-purple-500 focus:outline-none bg-white text-[18px] font-semibold"
+            />
+          </div>
+
+          <!-- Nội dung câu hỏi -->
+          <div>
+            <label for="input-question-text" class="block font-bold text-purple-950 text-[18px] mb-1.5">
+              Nội dung câu hỏi <span class="text-rose-600">*</span>
+            </label>
+            <textarea
+              id="input-question-text"
+              rows="3"
+              required
+              placeholder="Nhập nội dung câu hỏi trắc nghiệm tại đây..."
+              class="w-full p-3.5 rounded-2xl border-2 border-purple-200 focus:border-pink-500 focus:outline-none focus:ring-4 focus:ring-pink-100 bg-white text-[18px]"
+            ></textarea>
+          </div>
+
+          <!-- Đính kèm hình ảnh cho câu hỏi (không bắt buộc) -->
+          <div class="p-4 rounded-2xl bg-gradient-to-r from-indigo-50/80 via-purple-50/70 to-pink-50/80 border-2 border-indigo-200 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <label for="input-image-url" class="font-bold text-purple-950 text-[18px] flex items-center gap-2">
+                <span>🖼️</span>
+                <span>Hình ảnh đính kèm cho câu hỏi (không bắt buộc)</span>
+              </label>
+              <span class="text-[16px] text-indigo-800 font-semibold">
+                Hỗ trợ chọn ảnh từ máy, dán ảnh (Ctrl + V) hoặc dán link URL
+              </span>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-2.5">
+              <button
+                id="btn-upload-image"
+                type="button"
+                class="btn-vibrant px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold text-[17px] shadow-sm cursor-pointer shrink-0"
+              >
+                📷 Chọn ảnh từ máy
+              </button>
+              <input id="input-image-file" type="file" accept="image/*" class="hidden" />
+              <input
+                id="input-image-url"
+                type="text"
+                placeholder="Hoặc dán đường dẫn hình ảnh (https://...) tại đây..."
+                class="flex-1 p-2.5 px-3.5 rounded-xl border-2 border-indigo-200 focus:border-indigo-500 focus:outline-none bg-white text-[18px]"
+              />
+            </div>
+
+            <!-- Khung xem trước hình ảnh đính kèm -->
+            <div id="image-preview-wrapper" class="hidden pt-2">
+              <div class="relative inline-flex flex-col items-start gap-2 p-3 rounded-2xl bg-white border-2 border-purple-200 shadow-sm max-w-full">
+                <img
+                  id="image-preview-img"
+                  src=""
+                  alt="Xem trước hình ảnh câu hỏi"
+                  class="max-h-56 max-w-full rounded-xl object-contain border border-purple-100 cursor-zoom-in"
+                />
+                <div class="flex flex-wrap items-center justify-between gap-3 w-full">
+                  <span id="image-preview-info" class="text-[16px] text-emerald-800 font-bold"></span>
+                  <button
+                    id="btn-remove-image"
+                    type="button"
+                    class="btn-vibrant px-3.5 py-1 rounded-xl bg-rose-100 border border-rose-400 text-rose-900 font-bold text-[16px] cursor-pointer"
+                  >
+                    🗑 Gỡ hình ảnh
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4 Đáp án A, B, C, D -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Đáp án A -->
+            <div class="p-3.5 rounded-2xl bg-pink-50/70 border-2 border-pink-200">
+              <label for="input-opt-A" class="flex items-center gap-2 font-bold text-pink-900 text-[18px] mb-2">
+                <span class="badge-A w-8 h-8 rounded-full inline-flex items-center justify-center font-bold text-[18px] shadow-sm">A</span>
+                <span>Đáp án A <span class="text-rose-600">*</span></span>
+              </label>
+              <input
+                id="input-opt-A"
+                type="text"
+                required
+                placeholder="Nhập nội dung đáp án A..."
+                class="w-full p-3 rounded-xl border-2 border-pink-200 focus:border-pink-500 focus:outline-none bg-white text-[18px]"
+              />
+            </div>
+
+            <!-- Đáp án B -->
+            <div class="p-3.5 rounded-2xl bg-sky-50/70 border-2 border-sky-200">
+              <label for="input-opt-B" class="flex items-center gap-2 font-bold text-sky-900 text-[18px] mb-2">
+                <span class="badge-B w-8 h-8 rounded-full inline-flex items-center justify-center font-bold text-[18px] shadow-sm">B</span>
+                <span>Đáp án B <span class="text-rose-600">*</span></span>
+              </label>
+              <input
+                id="input-opt-B"
+                type="text"
+                required
+                placeholder="Nhập nội dung đáp án B..."
+                class="w-full p-3 rounded-xl border-2 border-sky-200 focus:border-sky-500 focus:outline-none bg-white text-[18px]"
+              />
+            </div>
+
+            <!-- Đáp án C -->
+            <div class="p-3.5 rounded-2xl bg-amber-50/70 border-2 border-amber-200">
+              <label for="input-opt-C" class="flex items-center gap-2 font-bold text-amber-900 text-[18px] mb-2">
+                <span class="badge-C w-8 h-8 rounded-full inline-flex items-center justify-center font-bold text-[18px] shadow-sm">C</span>
+                <span>Đáp án C <span class="text-rose-600">*</span></span>
+              </label>
+              <input
+                id="input-opt-C"
+                type="text"
+                required
+                placeholder="Nhập nội dung đáp án C..."
+                class="w-full p-3 rounded-xl border-2 border-amber-200 focus:border-amber-500 focus:outline-none bg-white text-[18px]"
+              />
+            </div>
+
+            <!-- Đáp án D -->
+            <div class="p-3.5 rounded-2xl bg-purple-50/70 border-2 border-purple-200">
+              <label for="input-opt-D" class="flex items-center gap-2 font-bold text-purple-900 text-[18px] mb-2">
+                <span class="badge-D w-8 h-8 rounded-full inline-flex items-center justify-center font-bold text-[18px] shadow-sm">D</span>
+                <span>Đáp án D <span class="text-rose-600">*</span></span>
+              </label>
+              <input
+                id="input-opt-D"
+                type="text"
+                required
+                placeholder="Nhập nội dung đáp án D..."
+                class="w-full p-3 rounded-xl border-2 border-purple-200 focus:border-purple-500 focus:outline-none bg-white text-[18px]"
+              />
+            </div>
+          </div>
+
+          <!-- Chọn đáp án đúng trực quan -->
+          <div>
+            <div class="font-bold text-purple-950 text-[18px] mb-2">
+              Chọn đáp án đúng <span class="text-rose-600">*</span>
+            </div>
+            <div id="correct-selector-group" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <button type="button" data-answer="0" class="correct-pick-btn btn-vibrant p-3 rounded-2xl border-2 font-bold text-[18px] flex items-center justify-center gap-2 cursor-pointer">
+                <span class="badge-A w-7 h-7 rounded-full inline-flex items-center justify-center text-[17px]">A</span>
+                <span>Đáp án A</span>
+              </button>
+              <button type="button" data-answer="1" class="correct-pick-btn btn-vibrant p-3 rounded-2xl border-2 font-bold text-[18px] flex items-center justify-center gap-2 cursor-pointer">
+                <span class="badge-B w-7 h-7 rounded-full inline-flex items-center justify-center text-[17px]">B</span>
+                <span>Đáp án B</span>
+              </button>
+              <button type="button" data-answer="2" class="correct-pick-btn btn-vibrant p-3 rounded-2xl border-2 font-bold text-[18px] flex items-center justify-center gap-2 cursor-pointer">
+                <span class="badge-C w-7 h-7 rounded-full inline-flex items-center justify-center text-[17px]">C</span>
+                <span>Đáp án C</span>
+              </button>
+              <button type="button" data-answer="3" class="correct-pick-btn btn-vibrant p-3 rounded-2xl border-2 font-bold text-[18px] flex items-center justify-center gap-2 cursor-pointer">
+                <span class="badge-D w-7 h-7 rounded-full inline-flex items-center justify-center text-[17px]">D</span>
+                <span>Đáp án D</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Giải thích (tùy chọn) -->
+          <div>
+            <label for="input-explanation" class="block font-bold text-purple-950 text-[18px] mb-1.5">
+              Giải thích đáp án (không bắt buộc)
+            </label>
+            <textarea
+              id="input-explanation"
+              rows="2"
+              placeholder="Nhập lời giải thích ngắn gọn hiển thị sau khi người học chọn đáp án..."
+              class="w-full p-3.5 rounded-2xl border-2 border-teal-200 focus:border-teal-500 focus:outline-none focus:ring-4 focus:ring-teal-100 bg-white text-[18px]"
+            ></textarea>
+          </div>
+
+          <!-- Nút hành động -->
+          <div class="flex flex-wrap items-center gap-3 pt-1">
+            <button
+              id="btn-submit-question"
+              type="submit"
+              class="btn-vibrant px-7 py-3.5 rounded-2xl bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 text-white font-bold text-[18px] shadow-lg cursor-pointer"
+            >
+              ✨ Thêm vào ngân hàng câu hỏi
+            </button>
+            <button
+              id="btn-cancel-edit"
+              type="button"
+              class="hidden btn-vibrant px-6 py-3.5 rounded-2xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-[18px] cursor-pointer"
+            >
+              ✖ Hủy chỉnh sửa
+            </button>
+          </div>
+        </form>
+
+        <!-- FORM 2: NHẬP NHANH NHIỀU CÂU -->
+        <div id="bulk-import-panel" class="hidden space-y-4">
+          <div class="p-4 rounded-2xl bg-gradient-to-r from-sky-50/90 to-purple-50/90 border-2 border-sky-200">
+            <label for="input-bulk-lesson" class="block font-bold text-purple-950 text-[18px] mb-1.5">
+              📖 Bài học áp dụng cho loạt câu hỏi này:
+            </label>
+            <input
+              id="input-bulk-lesson"
+              type="text"
+              list="lesson-suggestions"
+              placeholder="Ví dụ: Ho ra máu"
+              class="w-full p-3 rounded-xl border-2 border-sky-200 focus:border-purple-500 focus:outline-none bg-white text-[18px] font-semibold"
+            />
+          </div>
+
+          <div class="p-4 rounded-2xl bg-sky-50 border-2 border-sky-200 text-[18px] text-sky-950">
+            <div class="font-bold mb-1">📋 Hướng dẫn định dạng nhập nhanh (mỗi câu cách nhau bởi dòng trống):</div>
+            <pre class="bg-white/90 p-3 rounded-xl border border-sky-200 text-[17px] overflow-x-auto whitespace-pre-wrap leading-relaxed">Câu 1: Thủ đô của Việt Nam là thành phố nào?
+A. Thành phố Hồ Chí Minh
+B. Hà Nội
+C. Đà Nẵng
+D. Cần Thơ
+Đáp án: B
+Giải thích: Hà Nội là thủ đô của nước Cộng hòa xã hội chủ nghĩa Việt Nam.
+Bài: Bài 1: Kiến thức chung (không bắt buộc — mặc định lấy theo ô phía trên)
+Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
+          </div>
+
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <label for="input-bulk-text" class="font-bold text-purple-950 text-[18px]">
+                Dán danh sách câu hỏi vào đây:
+              </label>
+              <button
+                id="btn-fill-bulk-sample"
+                type="button"
+                class="btn-vibrant px-4 py-1.5 rounded-xl bg-amber-100 border border-amber-400 text-amber-900 font-bold text-[17px] cursor-pointer"
+              >
+                📝 Chèn văn bản mẫu thử
+              </button>
+            </div>
+            <textarea
+              id="input-bulk-text"
+              rows="9"
+              placeholder="Dán nhiều câu hỏi theo mẫu trên vào đây..."
+              class="w-full p-4 rounded-2xl border-2 border-purple-200 focus:border-purple-500 focus:outline-none focus:ring-4 focus:ring-purple-100 bg-white text-[18px]"
+            ></textarea>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <button
+              id="btn-process-bulk"
+              type="button"
+              class="btn-vibrant px-7 py-3.5 rounded-2xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 text-white font-bold text-[18px] shadow-lg cursor-pointer"
+            >
+              ⚡ Phân tích &amp; Thêm hàng loạt
+            </button>
+            <button
+              id="btn-clear-bulk"
+              type="button"
+              class="btn-vibrant px-5 py-3.5 rounded-2xl bg-slate-100 border-2 border-slate-300 text-slate-700 font-bold text-[18px] cursor-pointer"
+            >
+              🗑 Xóa ô nhập
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Danh sách toàn bộ câu hỏi đã lưu -->
+      <section class="colorful-card rounded-3xl p-5 sm:p-7">
+        <div class="flex flex-col gap-4 mb-5">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <h2 class="text-[23px] font-bold text-purple-950 flex items-center gap-2 flex-wrap">
+              <span>📂</span>
+              <span>Danh sách câu hỏi đã lưu</span>
+              <span id="bank-list-total-badge" class="px-3 py-0.5 rounded-full bg-purple-100 text-purple-800 text-[17px]">0 câu</span>
+            </h2>
+
+            <div class="flex flex-wrap gap-2">
+              <button
+                id="btn-restore-samples"
+                type="button"
+                class="btn-vibrant px-4 py-2 rounded-2xl bg-teal-50 border-2 border-teal-400 text-teal-800 font-bold text-[17px] cursor-pointer shrink-0"
+                title="Thêm lại 5 câu hỏi kiến thức mẫu nếu chưa có"
+              >
+                ✨ Nạp câu mẫu
+              </button>
+              <button
+                id="btn-delete-all-questions"
+                type="button"
+                class="btn-vibrant px-4 py-2 rounded-2xl bg-rose-50 border-2 border-rose-400 text-rose-800 font-bold text-[17px] cursor-pointer shrink-0"
+                title="Xóa toàn bộ câu hỏi thuộc bài đang lọc hoặc toàn bộ ngân hàng"
+              >
+                🗑 Xóa theo mục lọc
+              </button>
+            </div>
+          </div>
+
+          <!-- Bộ lọc theo Bài học + Tìm kiếm -->
+          <div class="flex flex-col sm:flex-row gap-3">
+            <div class="sm:w-72">
+              <select
+                id="bank-lesson-filter"
+                class="w-full px-4 py-2.5 rounded-2xl border-2 border-purple-200 focus:border-pink-500 focus:outline-none bg-white text-purple-950 font-bold text-[18px] cursor-pointer"
+              >
+                <option value="ALL">🌈 Tất cả các bài</option>
+              </select>
+            </div>
+            <div class="relative flex-1">
+              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-purple-500 text-[18px]">🔍</span>
+              <input
+                id="input-search-bank"
+                type="text"
+                placeholder="Tìm kiếm câu hỏi, đáp án, tên bài..."
+                class="w-full pl-10 pr-4 py-2.5 rounded-2xl border-2 border-purple-200 focus:border-pink-500 focus:outline-none bg-white text-[18px]"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Danh sách câu hỏi -->
+        <div id="bank-questions-list" class="space-y-4">
+          <!-- Danh sách sẽ được render bởi JavaScript -->
+        </div>
+      </section>
+    </main>
+
+    <!-- CHÂN TRANG -->
+    <footer class="mt-8 pb-6 text-center text-[17px] text-purple-900/80">
+      <p>🌈 <strong>Trắc Nghiệm Sắc Màu</strong> — Phông chữ Times New Roman (18px) • Chia theo từng bài học • Tự động lưu &amp; đồng bộ phiên bản khi xuất file HTML.</p>
+    </footer>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL ĐỒNG BỘ 2 CHIỀU GOOGLE DRIVE (GIỐNG APP PHÒNG KHÁM) -->
+  <!-- ========================================================= -->
+  <div id="sync-modal-overlay" class="hidden fixed inset-0 z-50 bg-purple-950/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="colorful-card rounded-3xl max-w-2xl w-full p-5 sm:p-6 border-2 border-sky-300 shadow-2xl animate-fade-up my-auto max-h-[92vh] overflow-y-auto">
+      <div class="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <h3 class="text-[23px] font-bold text-purple-950 flex items-center gap-2">
+            <span>☁️</span>
+            <span>Đồng bộ Google Drive (Laptop ↔ Điện thoại)</span>
+          </h3>
+          <p class="text-[17px] text-slate-700 mt-1">
+            Sử dụng đúng cơ chế tự động đồng bộ Google Drive như ứng dụng Phòng Khám — lưu thành file riêng <code class="px-1.5 py-0.5 rounded bg-purple-100 text-purple-900 font-bold">trac_nghiem_sac_mau_database.json</code> nên hoàn toàn an toàn, không ghi đè dữ liệu phòng khám.
+          </p>
+        </div>
+        <button
+          id="sync-modal-close-btn"
+          type="button"
+          class="btn-vibrant px-3.5 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-[18px] cursor-pointer shrink-0"
+        >
+          ✖
+        </button>
+      </div>
+
+      <!-- CÁCH 1: ĐỒNG BỘ TỰ ĐỘNG 2 CHIỀU QUA GOOGLE DRIVE -->
+      <div class="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-sky-50 via-indigo-50/70 to-purple-50 border-2 border-sky-300 space-y-3.5 mb-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h4 class="text-[20px] font-bold text-indigo-950">🌐 Cách 1: Tự động đồng bộ Google Drive</h4>
+          <span id="drive-sync-state-pill" class="px-3 py-0.5 rounded-full bg-slate-200 text-slate-800 font-bold text-[16px]">
+            Chưa kết nối
+          </span>
+        </div>
+
+        <div class="p-3 rounded-xl bg-amber-50 border border-amber-300 text-[16px] text-amber-950">
+          <strong>💡 Lưu ý quan trọng để đăng nhập Google hoạt động trên cả Laptop &amp; Điện thoại:</strong>
+          Hãy mở trang trắc nghiệm này từ <strong>đường link web (https://...)</strong> cùng nơi bạn đang đặt trang Phòng Khám (ví dụ GitHub Pages / Netlify / Vercel). Nếu mở file trực tiếp trong ổ cứng (<code class="font-bold">file://</code>) hoặc mở tệp đính kèm trong Zalo (<code class="font-bold">content://</code>), trình duyệt Google sẽ chặn cửa sổ đăng nhập OAuth.
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label for="input-drive-client-id" class="block font-bold text-purple-950 text-[17px] mb-1">
+              Google OAuth Client ID (đã điền sẵn giống app Phòng Khám):
+            </label>
+            <input
+              id="input-drive-client-id"
+              type="text"
+              placeholder="xxxx.apps.googleusercontent.com"
+              class="w-full px-3.5 py-2.5 rounded-xl border-2 border-sky-200 focus:border-indigo-500 focus:outline-none bg-white text-[17px]"
+            />
+          </div>
+          <div>
+            <label for="input-drive-email" class="block font-bold text-purple-950 text-[17px] mb-1">
+              Email Google được phép đồng bộ (để trống nếu cho phép mọi Gmail):
+            </label>
+            <input
+              id="input-drive-email"
+              type="email"
+              placeholder="nguyenminhctump@gmail.com"
+              class="w-full px-3.5 py-2.5 rounded-xl border-2 border-sky-200 focus:border-indigo-500 focus:outline-none bg-white text-[17px]"
+            />
+          </div>
+        </div>
+
+        <div class="flex flex-wrap gap-2 pt-1">
+          <button
+            id="btn-drive-modal-login"
+            type="button"
+            class="btn-vibrant px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold text-[17px] shadow-md cursor-pointer"
+          >
+            🔐 Đăng nhập Google Drive
+          </button>
+          <button
+            id="btn-drive-modal-pull"
+            type="button"
+            class="btn-vibrant px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-[17px] shadow-sm cursor-pointer"
+          >
+            ⬇ Kéo từ Drive về máy này
+          </button>
+          <button
+            id="btn-drive-modal-push"
+            type="button"
+            class="btn-vibrant px-4 py-2.5 rounded-xl bg-amber-500 text-purple-950 font-bold text-[17px] shadow-sm cursor-pointer"
+          >
+            ⬆ Đẩy máy này lên Drive
+          </button>
+          <button
+            id="btn-drive-save-settings"
+            type="button"
+            class="btn-vibrant px-4 py-2.5 rounded-xl bg-white border-2 border-indigo-400 text-indigo-900 font-bold text-[17px] cursor-pointer"
+          >
+            💾 Lưu cấu hình
+          </button>
+          <button
+            id="btn-drive-modal-logout"
+            type="button"
+            class="hidden btn-vibrant px-4 py-2.5 rounded-xl bg-rose-100 border border-rose-400 text-rose-900 font-bold text-[17px] cursor-pointer"
+          >
+            🚪 Đăng xuất
+          </button>
+        </div>
+      </div>
+
+      <!-- CÁCH 2: ĐỒNG BỘ THỦ CÔNG QUA FILE JSON GỬI ZALO (KHI MỞ NGOẠI TUYẾN) -->
+      <div class="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-amber-50/90 to-pink-50/90 border-2 border-amber-300 space-y-3">
+        <h4 class="text-[20px] font-bold text-amber-950">📤 Cách 2: Đồng bộ nhanh qua file JSON (Khi mở ngoại tuyến)</h4>
+        <p class="text-[17px] text-slate-800">
+          Khi chưa đưa lên web, bạn có thể bấm <strong>Xuất file đồng bộ (.json)</strong> gửi qua Zalo cho máy kia. Ở máy nhận, bấm <strong>Nạp đồng bộ (Ghi đè giống hệt)</strong> — đảm bảo đủ 100% bài học và không bị trùng câu!
+        </p>
+        <div class="flex flex-wrap gap-2.5">
+          <button
+            id="btn-sync-export-json"
+            type="button"
+            class="btn-vibrant px-4 py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 text-white font-bold text-[17px] shadow-md cursor-pointer"
+          >
+            📤 Xuất file đồng bộ (.json)
+          </button>
+          <button
+            id="btn-sync-import-replace-json"
+            type="button"
+            class="btn-vibrant px-4 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-600 text-white font-bold text-[17px] shadow-md cursor-pointer"
+          >
+            📥 Nạp đồng bộ (Ghi đè giống hệt)
+          </button>
+          <input id="input-import-replace-json" type="file" accept=".json,application/json" class="hidden" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL XÁC NHẬN & ĐỔI TÊN BÀI TỰ THIẾT KẾ                  -->
+  <!-- ========================================================= -->
+  <div id="custom-modal-overlay" class="hidden fixed inset-0 z-50 bg-purple-950/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="colorful-card rounded-3xl max-w-md w-full p-6 border-2 border-pink-300 shadow-2xl animate-fade-up">
+      <div class="flex items-start gap-3 mb-3">
+        <div id="modal-icon" class="text-3xl shrink-0">⚠️</div>
+        <div class="flex-1 min-w-0">
+          <h3 id="modal-title" class="text-[22px] font-bold text-purple-950">Xác nhận thao tác</h3>
+          <p id="modal-message" class="text-[18px] text-slate-700 mt-1.5 break-words"></p>
+          <input
+            id="modal-input"
+            type="text"
+            class="hidden mt-3 w-full px-3.5 py-2.5 rounded-xl border-2 border-purple-200 focus:border-pink-500 focus:outline-none bg-white text-[18px] font-semibold"
+          />
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 mt-6">
+        <button id="modal-cancel-btn" type="button" class="btn-vibrant px-5 py-2.5 rounded-2xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-[18px] cursor-pointer">
+          Hủy bỏ
+        </button>
+        <button id="modal-confirm-btn" type="button" class="btn-vibrant px-5 py-2.5 rounded-2xl bg-gradient-to-r from-rose-500 to-red-600 text-white font-bold text-[18px] shadow-md cursor-pointer">
+          Xác nhận
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL PHÓNG TO HÌNH ẢNH (LIGHTBOX)                        -->
+  <!-- ========================================================= -->
+  <div id="image-lightbox-overlay" class="hidden fixed inset-0 z-50 bg-purple-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="relative max-w-4xl w-full flex flex-col items-center animate-fade-up">
+      <button id="lightbox-close-btn" type="button" class="btn-vibrant self-end mb-3 px-4 py-2 rounded-2xl bg-white text-purple-950 font-bold text-[18px] shadow-lg cursor-pointer">
+        ✖ Đóng ảnh
+      </button>
+      <div class="bg-white p-2.5 rounded-3xl shadow-2xl border-2 border-white/80 max-w-full">
+        <img id="lightbox-img" src="" alt="Hình ảnh phóng to của câu hỏi" class="max-h-[80vh] max-w-full rounded-2xl object-contain" />
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- KHUNG THÔNG BÁO TOAST GÓC MÀN HÌNH                        -->
+  <!-- ========================================================= -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm w-[calc(100%-2.5rem)] pointer-events-none"></div>
+
+  <!-- ========================================================= -->
+  <!-- LOGIC ỨNG DỤNG, PHÂN LOẠI THEO BÀI & TỰ CẬP NHẬT CODE     -->
+  <!-- ========================================================= -->
+  <script>
+  (function () {
+    'use strict';
+
+    // Lưu trữ các hàm Firebase được nạp động khi môi trường có cấu hình đám mây
+    const fb = {};
+
+    // =========================================================================
+    // 1. CHỤP BẢN SAO HTML SẠCH TRƯỚC KHI RENDER ĐỂ XUẤT FILE CẬP NHẬT CODE
+    // =========================================================================
+    function captureCleanHtmlTemplate() {
+      try {
+        const clone = document.documentElement.cloneNode(true);
+        const head = clone.querySelector('head');
+        if (head) {
+          // Loại bỏ các thẻ <style> do Tailwind CDN tự sinh trong lúc chạy để file xuất ra gọn sạch
+          head.querySelectorAll('style').forEach((styleEl) => {
+            if (styleEl.id !== 'app-custom-styles') {
+              styleEl.remove();
+            }
+          });
+        }
+        return '<!DOCTYPE html>\n' + clone.outerHTML;
+      } catch (err) {
+        console.error('Lỗi khi chụp mẫu HTML sạch:', err);
+        return '';
+      }
+    }
+
+    const INITIAL_CLEAN_HTML = captureCleanHtmlTemplate();
+
+    // =========================================================================
+    // 2. DẤU PHIÊN BẢN & MẢNG CÂU HỎI TÍCH HỢP TRONG CODE
+    //    (Tự động cập nhật khi xuất file HTML để thiết bị mới/Zalo nhận đúng bản mới nhất)
+    // =========================================================================
+    const DEFAULT_LESSON = 'Bài 1: Kiến thức chung';
+
+    const EMBEDDED_DATA_UPDATED_AT =
+/* __DATA_VERSION_START__ */
+0
+/* __DATA_VERSION_END__ */
+;
+
+    const EMBEDDED_DRIVE_CONFIG =
+/* __DRIVE_CONFIG_START__ */
+{
+  "clientId": "824318993684-ia5cneff57ilnufpum1m9vfuctlc8ers.apps.googleusercontent.com",
+  "allowedEmail": "nguyenminhctump@gmail.com",
+  "fileName": "trac_nghiem_sac_mau_database.json"
+}
+/* __DRIVE_CONFIG_END__ */
+;
+
+    const DEFAULT_QUESTIONS =
+/* __QUESTIONS_START__ */
+[
+  {
+    "id": "sample_q1",
+    "lesson": "Bài 1: Kiến thức chung",
+    "question": "Thủ đô của nước Cộng hòa xã hội chủ nghĩa Việt Nam là thành phố nào?",
+    "options": [
+      "Thành phố Hồ Chí Minh",
+      "Hà Nội",
+      "Đà Nẵng",
+      "Huế"
+    ],
+    "correct": 1,
+    "explanation": "Hà Nội là thủ đô của nước Cộng hòa xã hội chủ nghĩa Việt Nam, trung tâm chính trị, văn hóa và lịch sử lâu đời.",
+    "image": "",
+    "createdAt": 1700000001000
+  },
+  {
+    "id": "sample_q2",
+    "lesson": "Bài 1: Kiến thức chung",
+    "question": "Hành tinh nào nằm gần Mặt Trời nhất trong Hệ Mặt Trời?",
+    "options": [
+      "Sao Kim (Venus)",
+      "Sao Hỏa (Mars)",
+      "Sao Thủy (Mercury)",
+      "Trái Đất (Earth)"
+    ],
+    "correct": 2,
+    "explanation": "Sao Thủy là hành tinh nhỏ nhất và có quỹ đạo gần Mặt Trời nhất trong Hệ Mặt Trời.",
+    "image": "",
+    "createdAt": 1700000002000
+  },
+  {
+    "id": "sample_q3",
+    "lesson": "Bài 1: Kiến thức chung",
+    "question": "Trong bảng tuần hoàn hóa học, ký hiệu nguyên tố của Vàng là gì?",
+    "options": [
+      "Ag",
+      "Au",
+      "Fe",
+      "Cu"
+    ],
+    "correct": 1,
+    "explanation": "Vàng có ký hiệu hóa học là Au (bắt nguồn từ tiếng Latin 'Aurum'), còn Ag là Bạc.",
+    "image": "",
+    "createdAt": 1700000003000
+  },
+  {
+    "id": "sample_q4",
+    "lesson": "Bài 2: Khoa học & Đời sống",
+    "question": "Ở điều kiện áp suất khí quyển tiêu chuẩn (1 atm), nước tinh khiết sôi ở nhiệt độ bao nhiêu?",
+    "options": [
+      "80°C",
+      "90°C",
+      "100°C",
+      "120°C"
+    ],
+    "correct": 2,
+    "explanation": "Ở áp suất 1 atm, nước tinh khiết đóng băng ở 0°C và sôi ở đúng 100°C.",
+    "image": "",
+    "createdAt": 1700000004000
+  },
+  {
+    "id": "sample_q5",
+    "lesson": "Bài 2: Khoa học & Đời sống",
+    "question": "Cơ quan nào trong cơ thể người có vai trò chính là bơm máu đi nuôi toàn bộ cơ thể?",
+    "options": [
+      "Phổi",
+      "Gan",
+      "Thận",
+      "Tim"
+    ],
+    "correct": 3,
+    "explanation": "Tim hoạt động như một chiếc bơm cơ học bền bỉ đẩy máu giàu oxy đi khắp cơ thể qua hệ thống tuần hoàn.",
+    "image": "",
+    "createdAt": 1700000005000
+  }
+]
+/* __QUESTIONS_END__ */
+;
+
+    // Tạo dấu mốc động để tránh trùng khớp với chính chuỗi trong hàm xuất code
+    const MARKER_START = '/*' + ' __QUESTIONS_START__ ' + '*/';
+    const MARKER_END = '/*' + ' __QUESTIONS_END__ ' + '*/';
+    const VERSION_MARKER_START = '/*' + ' __DATA_VERSION_START__ ' + '*/';
+    const VERSION_MARKER_END = '/*' + ' __DATA_VERSION_END__ ' + '*/';
+    const DRIVE_MARKER_START = '/*' + ' __DRIVE_CONFIG_START__ ' + '*/';
+    const DRIVE_MARKER_END = '/*' + ' __DRIVE_CONFIG_END__ ' + '*/';
+    const OPTION_LABELS = ['A', 'B', 'C', 'D'];
+    const LOCAL_STORAGE_KEY = 'trac_nghiem_sac_mau_bank_v3';
+    const LEGACY_STORAGE_KEY = 'trac_nghiem_sac_mau_bank_v2';
+    const DRIVE_DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
+    const DRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email';
+    const DRIVE_CONFIG_STORAGE_KEY = 'tn_drive_config_v1';
+    const DRIVE_FILE_ID_KEY = 'tn_drive_file_id';
+    const DRIVE_TOKEN_KEY = 'tn_oauth_token';
+    const DRIVE_EXPIRES_KEY = 'tn_oauth_expires_at';
+    const DRIVE_UNSYNCED_KEY = 'tn_drive_unsynced';
+    const IMAGE_FALLBACK_URL = 'https://placehold.co/600x320/f3e8ff/6b21a8?text=Khong+tai+duoc+hinh+anh';
+
+    function generateId() {
+      return 'q_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+    }
+
+    function normalizeLessonName(name) {
+      const cleaned = String(name || '').trim();
+      return cleaned || DEFAULT_LESSON;
+    }
+
+    // Hàm sao chép sâu và chuẩn hóa danh sách câu hỏi an toàn
+    function cloneQuestions(list) {
+      if (!Array.isArray(list)) return [];
+      return list
+        .filter((q) => q && typeof q.question === 'string' && Array.isArray(q.options) && q.options.length === 4)
+        .map((q, idx) => ({
+          id: q.id ? String(q.id) : generateId(),
+          lesson: normalizeLessonName(q.lesson),
+          question: String(q.question),
+          options: q.options.map((opt) => String(opt || '')),
+          correct: Number.isInteger(Number(q.correct)) && Number(q.correct) >= 0 && Number(q.correct) <= 3 ? Number(q.correct) : 0,
+          explanation: String(q.explanation || ''),
+          image: String(q.image || ''),
+          createdAt: typeof q.createdAt === 'number' ? q.createdAt : Date.now() + idx
+        }));
+    }
+
+    // =========================================================================
+    // 3. QUẢN LÝ TRẠNG THÁI ỨNG DỤNG
+    // =========================================================================
+    const state = {
+      activeTab: 'quiz', // 'quiz' | 'bank'
+      questions: cloneQuestions(DEFAULT_QUESTIONS),
+      customLessons: [], // Lưu tạm các bài vừa tạo dù chưa có câu hỏi
+      selectedQuizLesson: 'ALL',
+      selectedBankLesson: 'ALL',
+      quizOrder: [], // Mảng chứa các ID câu hỏi theo thứ tự làm bài hiện tại
+      currentIndex: 0,
+      userAnswers: {}, // { [questionId]: selectedOptionIndex }
+      reviewWrongMode: false,
+      selectedCorrectInForm: 0,
+      currentFormImage: '',
+      searchQuery: '',
+      modalConfirmCallback: null,
+      // Firebase & Trạng thái lưu trữ
+      db: null,
+      auth: null,
+      user: null,
+      appId: typeof __app_id !== 'undefined' ? __app_id : 'trac-nghiem-sac-mau',
+      cloudEnabled: false,
+      cloudInitializing: false,
+      hasCheckedInitialSeed: false,
+      pendingCloudOps: [],
+      unsubscribeSnapshot: null,
+      // Lưu trực tiếp vào file HTML trên máy (File System Access API)
+      linkedFileHandle: null,
+      hasUnsavedLocalChanges: false,
+      localStorageAvailable: false,
+      loadedFromNewerEmbeddedFile: false,
+      localUpdatedAt: EMBEDDED_DATA_UPDATED_AT || 0,
+      // Đồng bộ tự động 2 chiều qua Google Drive (giống app Phòng Khám)
+      drive: {
+        clientId: EMBEDDED_DRIVE_CONFIG.clientId,
+        allowedEmail: EMBEDDED_DRIVE_CONFIG.allowedEmail,
+        fileName: EMBEDDED_DRIVE_CONFIG.fileName || 'trac_nghiem_sac_mau_database.json',
+        tokenClient: null,
+        gapiInited: false,
+        gisInited: false,
+        connected: false,
+        userEmail: '',
+        fileId: null,
+        autoSyncTimer: null,
+        tokenRefreshTimer: null,
+        isSyncing: false,
+        pendingSyncAfterCurrent: false,
+        hasUnsyncedChanges: false
+      }
+    };
+
+    // Lưu dự phòng ngay vào localStorage kèm cờ trạng thái đã ghi ra file HTML hay chưa
+    function saveQuestionsToLocalStorage(options) {
+      const opts = options || {};
+      const updatedAt = typeof opts.updatedAt === 'number' ? opts.updatedAt : Date.now();
+      const baseVersion = typeof opts.baseVersion === 'number' ? opts.baseVersion : EMBEDDED_DATA_UPDATED_AT;
+      const unsavedToFile = typeof opts.unsavedToFile === 'boolean' ? opts.unsavedToFile : state.hasUnsavedLocalChanges;
+      state.localUpdatedAt = updatedAt;
+      try {
+        window.localStorage.setItem(
+          LOCAL_STORAGE_KEY,
+          JSON.stringify({
+            questions: state.questions,
+            customLessons: state.customLessons,
+            updatedAt: updatedAt,
+            baseVersion: baseVersion,
+            unsavedToFile: unsavedToFile
+          })
+        );
+        state.localStorageAvailable = true;
+        return true;
+      } catch (err) {
+        state.localStorageAvailable = false;
+        return false;
+      }
+    }
+
+    // Khôi phục thông minh:
+    // - Nếu mở file HTML qua Zalo Android (content://) hoặc mở một file HTML vừa xuất mới hơn,
+    //   LUÔN ưu tiên dữ liệu mới tích hợp trong file HTML để không bị bộ nhớ cũ ghi đè.
+    function loadQuestionsFromLocalStorage() {
+      try {
+        const isContentProtocol = window.location && window.location.protocol === 'content:';
+        const raw = window.localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (!raw) {
+          if (EMBEDDED_DATA_UPDATED_AT === 0) {
+            const legacyRaw = window.localStorage.getItem(LEGACY_STORAGE_KEY);
+            if (legacyRaw) {
+              const legacyParsed = JSON.parse(legacyRaw);
+              if (legacyParsed && Array.isArray(legacyParsed.questions)) {
+                state.questions = cloneQuestions(legacyParsed.questions);
+                if (Array.isArray(legacyParsed.customLessons)) {
+                  state.customLessons = legacyParsed.customLessons.map((x) => String(x || '').trim()).filter(Boolean);
+                }
+                state.localStorageAvailable = true;
+                setUnsavedLocalState(true);
+                saveQuestionsToLocalStorage({ unsavedToFile: true });
+                return true;
+              }
+            }
+          } else {
+            saveQuestionsToLocalStorage({
+              updatedAt: EMBEDDED_DATA_UPDATED_AT,
+              baseVersion: EMBEDDED_DATA_UPDATED_AT,
+              unsavedToFile: false
+            });
+          }
+          return false;
+        }
+
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.questions)) return false;
+
+        const savedUpdatedAt = typeof parsed.updatedAt === 'number' ? parsed.updatedAt : 0;
+        const savedBaseVersion = typeof parsed.baseVersion === 'number' ? parsed.baseVersion : 0;
+        const savedUnsaved = Boolean(parsed.unsavedToFile);
+
+        // Trường hợp 1: File HTML hiện tại MỚI HƠN dữ liệu trong trình duyệt, hoặc người dùng vừa mở file HTML khác trên Zalo
+        if (
+          EMBEDDED_DATA_UPDATED_AT > 0 &&
+          (
+            EMBEDDED_DATA_UPDATED_AT >= savedUpdatedAt ||
+            (savedBaseVersion !== EMBEDDED_DATA_UPDATED_AT && (!savedUnsaved || isContentProtocol))
+          )
+        ) {
+          state.questions = cloneQuestions(DEFAULT_QUESTIONS);
+          state.customLessons = [];
+          state.loadedFromNewerEmbeddedFile = true;
+          setUnsavedLocalState(false);
+          saveQuestionsToLocalStorage({
+            updatedAt: EMBEDDED_DATA_UPDATED_AT,
+            baseVersion: EMBEDDED_DATA_UPDATED_AT,
+            unsavedToFile: false
+          });
+          return false;
+        }
+
+        // Trường hợp 2: Trình duyệt có dữ liệu mới hơn do người dùng vừa chỉnh sửa trực tiếp trên máy này
+        state.questions = cloneQuestions(parsed.questions);
+        if (Array.isArray(parsed.customLessons)) {
+          state.customLessons = parsed.customLessons.map((x) => String(x || '').trim()).filter(Boolean);
+        }
+        state.localUpdatedAt = savedUpdatedAt;
+        state.localStorageAvailable = true;
+        if (savedUnsaved) {
+          setUnsavedLocalState(true);
+        }
+        return true;
+      } catch (err) {
+        console.warn('Không thể đọc dữ liệu từ localStorage:', err);
+      }
+      return false;
+    }
+
+    // =========================================================================
+    // 3B. ĐỒNG BỘ 2 CHIỀU TỰ ĐỘNG QUA GOOGLE DRIVE (GIỐNG APP PHÒNG KHÁM)
+    // =========================================================================
+    function safeLsGet(key) {
+      try { return window.localStorage.getItem(key); } catch (e) { return null; }
+    }
+
+    function safeLsSet(key, val) {
+      try { window.localStorage.setItem(key, val); } catch (e) {}
+    }
+
+    function safeLsRemove(key) {
+      try { window.localStorage.removeItem(key); } catch (e) {}
+    }
+
+    function loadDriveConfig() {
+      let clientId = (EMBEDDED_DRIVE_CONFIG && EMBEDDED_DRIVE_CONFIG.clientId) || '';
+      let allowedEmail = (EMBEDDED_DRIVE_CONFIG && EMBEDDED_DRIVE_CONFIG.allowedEmail) || '';
+      let fileName = (EMBEDDED_DRIVE_CONFIG && EMBEDDED_DRIVE_CONFIG.fileName) || 'trac_nghiem_sac_mau_database.json';
+
+      try {
+        const raw = safeLsGet(DRIVE_CONFIG_STORAGE_KEY);
+        if (raw) {
+          const saved = JSON.parse(raw);
+          if (saved && typeof saved.clientId === 'string' && saved.clientId.trim()) {
+            clientId = saved.clientId.trim();
+          }
+          if (saved && typeof saved.allowedEmail === 'string') {
+            allowedEmail = saved.allowedEmail.trim();
+          }
+        }
+      } catch (e) {
+        console.warn('Không thể đọc cấu hình Google Drive:', e);
+      }
+
+      state.drive.clientId = clientId;
+      state.drive.allowedEmail = allowedEmail;
+      state.drive.fileName = fileName;
+      state.drive.fileId = safeLsGet(DRIVE_FILE_ID_KEY) || null;
+      state.drive.hasUnsyncedChanges = safeLsGet(DRIVE_UNSYNCED_KEY) === 'true';
+      updateDriveModalUI();
+    }
+
+    function saveDriveConfigToStorage() {
+      safeLsSet(
+        DRIVE_CONFIG_STORAGE_KEY,
+        JSON.stringify({
+          clientId: state.drive.clientId,
+          allowedEmail: state.drive.allowedEmail
+        })
+      );
+    }
+
+    function updateDriveModalUI() {
+      const clientInput = document.getElementById('input-drive-client-id');
+      const emailInput = document.getElementById('input-drive-email');
+      const pill = document.getElementById('drive-sync-state-pill');
+      const headerAuthBtn = document.getElementById('header-gdrive-auth-btn');
+      const headerSyncBtn = document.getElementById('header-gdrive-sync-btn');
+      const modalLoginBtn = document.getElementById('btn-drive-modal-login');
+      const modalLogoutBtn = document.getElementById('btn-drive-modal-logout');
+
+      if (clientInput && document.activeElement !== clientInput) {
+        clientInput.value = state.drive.clientId || '';
+      }
+      if (emailInput && document.activeElement !== emailInput) {
+        emailInput.value = state.drive.allowedEmail || '';
+      }
+      if (pill) {
+        if (state.drive.connected) {
+          pill.textContent = '🟢 Đã kết nối: ' + (state.drive.userEmail || 'Google Drive');
+          pill.className = 'px-3 py-0.5 rounded-full bg-emerald-100 border border-emerald-400 text-emerald-900 font-bold text-[16px]';
+        } else {
+          pill.textContent = 'Chưa kết nối Google Drive';
+          pill.className = 'px-3 py-0.5 rounded-full bg-slate-200 text-slate-800 font-bold text-[16px]';
+        }
+      }
+      if (headerAuthBtn) {
+        headerAuthBtn.classList.toggle('hidden', state.drive.connected);
+      }
+      if (headerSyncBtn) {
+        headerSyncBtn.classList.toggle('hidden', !state.drive.connected);
+      }
+      if (modalLoginBtn) {
+        modalLoginBtn.textContent = state.drive.connected ? '🔄 Đổi tài khoản Google' : '🔐 Đăng nhập Google Drive';
+      }
+      if (modalLogoutBtn) {
+        modalLogoutBtn.classList.toggle('hidden', !state.drive.connected);
+      }
+    }
+
+    function scheduleDriveTokenAutoRefresh(expiresInSeconds) {
+      if (state.drive.tokenRefreshTimer) {
+        clearTimeout(state.drive.tokenRefreshTimer);
+      }
+      const refreshDelayMs = Math.max(60, expiresInSeconds - 180) * 1000;
+      state.drive.tokenRefreshTimer = setTimeout(() => {
+        if (state.drive.tokenClient) {
+          state.drive.tokenClient.requestAccessToken({
+            prompt: '',
+            login_hint: state.drive.allowedEmail || undefined
+          });
+        }
+      }, refreshDelayMs);
+    }
+
+    function initDriveTokenClient() {
+      if (!window.google || !window.google.accounts || !window.google.accounts.oauth2 || !state.drive.clientId) {
+        return false;
+      }
+      state.drive.tokenClient = window.google.accounts.oauth2.initTokenClient({
+        client_id: state.drive.clientId,
+        scope: DRIVE_SCOPES,
+        callback: async (resp) => {
+          if (resp.error !== undefined) {
+            console.error('Lỗi OAuth Google Drive:', resp);
+            setSyncStatus('error', 'Lỗi xác thực Google Drive — Vui lòng đăng nhập lại');
+            state.drive.connected = false;
+            updateDriveModalUI();
+            showToast('Đăng nhập Google Drive chưa thành công. Vui lòng thử lại!', 'error');
+            return;
+          }
+          const expiresIn = parseInt(resp.expires_in, 10) || 3599;
+          const expiresAt = Date.now() + (expiresIn - 120) * 1000;
+          safeLsSet(DRIVE_TOKEN_KEY, resp.access_token);
+          safeLsSet(DRIVE_EXPIRES_KEY, String(expiresAt));
+          if (window.gapi && window.gapi.client) {
+            window.gapi.client.setToken({ access_token: resp.access_token });
+          }
+          scheduleDriveTokenAutoRefresh(expiresIn);
+          await verifyAndLoadDriveUser(false);
+        }
+      });
+      state.drive.gisInited = true;
+      return true;
+    }
+
+    async function checkDriveAuthInit() {
+      if (!state.drive.gapiInited || !state.drive.gisInited) return;
+
+      const savedToken = safeLsGet(DRIVE_TOKEN_KEY);
+      const expiresAt = parseInt(safeLsGet(DRIVE_EXPIRES_KEY) || '0', 10);
+
+      if (savedToken && Date.now() < expiresAt) {
+        window.gapi.client.setToken({ access_token: savedToken });
+        const remainingSec = Math.floor((expiresAt - Date.now()) / 1000);
+        scheduleDriveTokenAutoRefresh(remainingSec);
+        await verifyAndLoadDriveUser(true);
+      } else {
+        state.drive.connected = false;
+        updateDriveModalUI();
+      }
+    }
+
+    function initGoogleDriveSync() {
+      let gapiPollCount = 0;
+      const pollGapi = setInterval(() => {
+        gapiPollCount++;
+        if (window.gapi && typeof window.gapi.load === 'function') {
+          clearInterval(pollGapi);
+          window.gapi.load('client', async () => {
+            try {
+              await window.gapi.client.init({ discoveryDocs: [DRIVE_DISCOVERY_DOC] });
+              state.drive.gapiInited = true;
+              await checkDriveAuthInit();
+            } catch (err) {
+              console.warn('Không khởi tạo được Google API Client:', err);
+            }
+          });
+        } else if (gapiPollCount > 80) {
+          clearInterval(pollGapi);
+        }
+      }, 150);
+
+      let gisPollCount = 0;
+      const pollGis = setInterval(() => {
+        gisPollCount++;
+        if (window.google && window.google.accounts && window.google.accounts.oauth2) {
+          clearInterval(pollGis);
+          if (initDriveTokenClient()) {
+            checkDriveAuthInit();
+          }
+        } else if (gisPollCount > 80) {
+          clearInterval(gisPollCount);
+        }
+      }, 150);
+    }
+
+    function handleDriveAuthClick() {
+      const protocol = window.location ? window.location.protocol : '';
+      if (protocol === 'file:' || protocol === 'content:') {
+        openSyncModal();
+        showToast('Google chặn đăng nhập khi mở file ngoại tuyến (file:// hoặc Zalo). Hãy mở trang này qua đường link web https:// (như GitHub Pages / Netlify) hoặc dùng Cách 2 (JSON)!', 'warning');
+        return;
+      }
+
+      if (!state.drive.clientId) {
+        openSyncModal();
+        showToast('Vui lòng nhập Google OAuth Client ID trước khi đăng nhập!', 'warning');
+        return;
+      }
+
+      if (!state.drive.tokenClient) {
+        if (!initDriveTokenClient()) {
+          showToast('Thư viện Google Drive đang tải, vui lòng đợi 2 giây rồi bấm lại nhé!', 'info');
+          return;
+        }
+      }
+
+      state.drive.tokenClient.requestAccessToken({
+        prompt: 'select_account',
+        login_hint: state.drive.allowedEmail || undefined
+      });
+    }
+
+    function handleDriveSignOut() {
+      safeLsRemove(DRIVE_TOKEN_KEY);
+      safeLsRemove(DRIVE_EXPIRES_KEY);
+      if (state.drive.tokenRefreshTimer) {
+        clearTimeout(state.drive.tokenRefreshTimer);
+        state.drive.tokenRefreshTimer = null;
+      }
+      if (window.gapi && window.gapi.client) {
+        window.gapi.client.setToken(null);
+      }
+      state.drive.connected = false;
+      state.drive.userEmail = '';
+      updateDriveModalUI();
+      setSyncStatus('code-only', 'Đã đăng xuất Google Drive (Lưu cục bộ trên máy)');
+      showToast('Đã đăng xuất khỏi Google Drive!', 'info');
+    }
+
+    async function verifyAndLoadDriveUser(isSilentRestore) {
+      try {
+        const tokenObj = window.gapi && window.gapi.client ? window.gapi.client.getToken() : null;
+        if (!tokenObj || !tokenObj.access_token) return;
+
+        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: 'Bearer ' + tokenObj.access_token }
+        });
+
+        if (!res.ok) {
+          safeLsRemove(DRIVE_TOKEN_KEY);
+          safeLsRemove(DRIVE_EXPIRES_KEY);
+          state.drive.connected = false;
+          updateDriveModalUI();
+          setSyncStatus('code-only', 'Phiên Google Drive đã hết hạn — Bấm Đăng nhập lại');
+          return;
+        }
+
+        const userInfo = await res.json();
+        const allowed = (state.drive.allowedEmail || '').trim().toLowerCase();
+        if (allowed && String(userInfo.email || '').toLowerCase() !== allowed) {
+          safeLsRemove(DRIVE_TOKEN_KEY);
+          safeLsRemove(DRIVE_EXPIRES_KEY);
+          window.gapi.client.setToken(null);
+          state.drive.connected = false;
+          updateDriveModalUI();
+          setSyncStatus('error', 'Chặn truy cập: Email không khớp');
+          showToast('Tài khoản ' + userInfo.email + ' không khớp với email được phép (' + state.drive.allowedEmail + ')!', 'error');
+          return;
+        }
+
+        state.drive.connected = true;
+        state.drive.userEmail = userInfo.email || '';
+        setUnsavedLocalState(false);
+        updateDriveModalUI();
+        setSyncStatus('saved', '☁️ Đã kết nối Drive: ' + state.drive.userEmail);
+
+        await loadDataFromDrive({ silent: isSilentRestore, force: false });
+      } catch (err) {
+        console.error('Lỗi xác thực tài khoản Google Drive:', err);
+        setSyncStatus('error', 'Lỗi kết nối mạng khi kiểm tra Google Drive');
+      }
+    }
+
+    async function loadDataFromDrive(options) {
+      const opts = options || {};
+      if (!state.drive.gapiInited || !window.gapi || !window.gapi.client || !window.gapi.client.getToken()) return false;
+      if (state.drive.isSyncing) return false;
+
+      try {
+        if (!opts.silent) {
+          setSyncStatus('saving', '☁️ Đang đồng bộ từ Google Drive...');
+        }
+
+        const escapedName = state.drive.fileName.replace(/'/g, "\\'");
+        const res = await window.gapi.client.drive.files.list({
+          q: "name='" + escapedName + "' and trashed=false",
+          fields: 'files(id, name)'
+        });
+
+        const files = (res.result && res.result.files) || [];
+        if (files.length > 0) {
+          state.drive.fileId = files[0].id;
+          safeLsSet(DRIVE_FILE_ID_KEY, state.drive.fileId);
+
+          const fileRes = await window.gapi.client.drive.files.get({
+            fileId: state.drive.fileId,
+            alt: 'media'
+          });
+
+          let data = fileRes.result;
+          if (typeof data === 'string') {
+            try { data = JSON.parse(data); } catch (e) { data = null; }
+          }
+
+          if (data && typeof data === 'object' && Array.isArray(data.questions)) {
+            const remoteUpdatedAt = typeof data.updatedAt === 'number'
+              ? data.updatedAt
+              : (Date.parse(data.updatedAt || '') || 0);
+
+            // Nếu máy này vừa có thay đổi mới hơn chưa kịp đẩy lên Drive và không phải đang ép kéo về -> đẩy lên Drive
+            if (!opts.force && state.drive.hasUnsyncedChanges && state.localUpdatedAt > remoteUpdatedAt) {
+              await saveToDrive({ urgent: false, silent: opts.silent });
+              return true;
+            }
+
+            // Áp dụng dữ liệu mới nhất từ Google Drive (giữ đúng cả thao tác xóa câu hỏi)
+            if (opts.force || remoteUpdatedAt >= state.localUpdatedAt || !state.drive.hasUnsyncedChanges) {
+              state.questions = cloneQuestions(data.questions);
+              state.customLessons = Array.isArray(data.customLessons)
+                ? data.customLessons.map((x) => String(x || '').trim()).filter(Boolean)
+                : [];
+              state.drive.hasUnsyncedChanges = false;
+              safeLsSet(DRIVE_UNSYNCED_KEY, 'false');
+              setUnsavedLocalState(false);
+              saveQuestionsToLocalStorage({
+                updatedAt: remoteUpdatedAt || Date.now(),
+                unsavedToFile: false
+              });
+              syncQuizOrderWithQuestions();
+              renderAll();
+            }
+
+            const nowStr = new Date().toLocaleTimeString('vi-VN');
+            setSyncStatus('saved', '☁️ Drive đã đồng bộ lúc ' + nowStr);
+            if (!opts.silent) {
+              showToast('Đã đồng bộ ' + state.questions.length + ' câu hỏi mới nhất từ Google Drive!', 'success');
+            }
+            return true;
+          }
+        }
+
+        // Chưa có file trên Google Drive -> tự khởi tạo file trac_nghiem_sac_mau_database.json ngay
+        setSyncStatus('saving', '☁️ Đang tạo file dữ liệu trên Google Drive...');
+        return await saveToDrive({ urgent: false, silent: opts.silent });
+      } catch (err) {
+        console.error('Lỗi tải dữ liệu từ Google Drive:', err);
+        setSyncStatus('error', 'Lỗi tải Google Drive (Dữ liệu vẫn an toàn trên máy)');
+        if (!opts.silent) {
+          showToast('Không thể tải dữ liệu từ Google Drive. Vui lòng kiểm tra kết nối mạng!', 'error');
+        }
+        return false;
+      }
+    }
+
+    async function saveToDrive(options) {
+      const opts = options || {};
+      const isUrgentExit = Boolean(opts.urgent);
+      if (!state.drive.gapiInited || !window.gapi || !window.gapi.client || !window.gapi.client.getToken()) {
+        return false;
+      }
+
+      if (state.drive.isSyncing && !isUrgentExit) {
+        state.drive.pendingSyncAfterCurrent = true;
+        return false;
+      }
+
+      state.drive.isSyncing = true;
+      try {
+        setSyncStatus('saving', '☁️ Đang tự động lưu lên Google Drive...');
+        const stamp = Date.now();
+        const dbContent = {
+          app: 'trac-nghiem-sac-mau',
+          questions: state.questions,
+          customLessons: state.customLessons,
+          updatedAt: stamp
+        };
+
+        const fileContent = JSON.stringify(dbContent);
+        const payloadSize = new Blob([fileContent]).size;
+        const canKeepAlive = payloadSize < 60000;
+        const token = window.gapi.client.getToken().access_token;
+
+        if (state.drive.fileId) {
+          const res = await fetch('https://www.googleapis.com/upload/drive/v3/files/' + state.drive.fileId + '?uploadType=media', {
+            method: 'PATCH',
+            keepalive: canKeepAlive,
+            headers: {
+              Authorization: 'Bearer ' + token,
+              'Content-Type': 'application/json'
+            },
+            body: fileContent
+          });
+
+          if (res.status === 401) {
+            if (state.drive.tokenClient && !isUrgentExit) {
+              state.drive.tokenClient.requestAccessToken({
+                prompt: '',
+                login_hint: state.drive.allowedEmail || undefined
+              });
+            }
+            throw new Error('Token Google Drive hết hạn (401)');
+          }
+          if (res.status === 404) {
+            state.drive.fileId = null;
+            safeLsRemove(DRIVE_FILE_ID_KEY);
+            state.drive.isSyncing = false;
+            return await saveToDrive(opts);
+          }
+          if (!res.ok) {
+            throw new Error('HTTP ' + res.status);
+          }
+        } else {
+          const metadata = {
+            name: state.drive.fileName,
+            mimeType: 'application/json'
+          };
+          const form = new FormData();
+          form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+          form.append('file', new Blob([fileContent], { type: 'application/json' }));
+
+          const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+            method: 'POST',
+            keepalive: canKeepAlive,
+            headers: { Authorization: 'Bearer ' + token },
+            body: form
+          });
+          if (!res.ok) {
+            throw new Error('HTTP ' + res.status);
+          }
+          const file = await res.json();
+          if (file && file.id) {
+            state.drive.fileId = file.id;
+            safeLsSet(DRIVE_FILE_ID_KEY, state.drive.fileId);
+          }
+        }
+
+        state.drive.hasUnsyncedChanges = false;
+        safeLsSet(DRIVE_UNSYNCED_KEY, 'false');
+        setUnsavedLocalState(false);
+        saveQuestionsToLocalStorage({ updatedAt: stamp, unsavedToFile: false });
+
+        const nowStr = new Date().toLocaleTimeString('vi-VN');
+        setSyncStatus('saved', '☁️ Đã lưu Google Drive lúc ' + nowStr);
+        if (!opts.silent) {
+          showToast('Đã đồng bộ ' + state.questions.length + ' câu hỏi lên Google Drive!', 'success');
+        }
+        return true;
+      } catch (err) {
+        console.error('Lỗi sao lưu lên Google Drive:', err);
+        setSyncStatus('error', 'Chưa lưu được lên Drive (Đang lưu an toàn trên máy)');
+        if (!opts.silent) {
+          showToast('Chưa lưu được lên Google Drive, dữ liệu vẫn an toàn trên máy này!', 'warning');
+        }
+        return false;
+      } finally {
+        state.drive.isSyncing = false;
+        if (state.drive.pendingSyncAfterCurrent) {
+          state.drive.pendingSyncAfterCurrent = false;
+          saveToDrive({ urgent: false, silent: true });
+        }
+      }
+    }
+
+    function scheduleDriveAutoSync(delayMs) {
+      const wait = typeof delayMs === 'number' ? delayMs : 0;
+      state.drive.hasUnsyncedChanges = true;
+      safeLsSet(DRIVE_UNSYNCED_KEY, 'true');
+      saveQuestionsToLocalStorage({ unsavedToFile: !state.drive.connected });
+
+      if (state.drive.autoSyncTimer) {
+        clearTimeout(state.drive.autoSyncTimer);
+        state.drive.autoSyncTimer = null;
+      }
+
+      if (!state.drive.connected || !window.gapi || !window.gapi.client || !window.gapi.client.getToken()) {
+        return false;
+      }
+
+      setSyncStatus('saving', '☁️ Đang chuẩn bị lưu lên Google Drive...');
+      if (wait <= 0) {
+        saveToDrive({ urgent: false, silent: true });
+      } else {
+        state.drive.autoSyncTimer = setTimeout(() => {
+          state.drive.autoSyncTimer = null;
+          saveToDrive({ urgent: false, silent: true });
+        }, wait);
+      }
+      return true;
+    }
+
+    function openSyncModal() {
+      updateDriveModalUI();
+      document.getElementById('sync-modal-overlay').classList.remove('hidden');
+    }
+
+    function closeSyncModal() {
+      document.getElementById('sync-modal-overlay').classList.add('hidden');
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function getQuestionById(id) {
+      return state.questions.find((q) => q.id === id) || null;
+    }
+
+    // Lấy danh sách tên bài học duy nhất theo thứ tự xuất hiện
+    function getLessonList() {
+      const seen = new Set();
+      const lessons = [];
+      state.questions.forEach((q) => {
+        const name = normalizeLessonName(q.lesson);
+        if (!seen.has(name)) {
+          seen.add(name);
+          lessons.push(name);
+        }
+      });
+      state.customLessons.forEach((name) => {
+        const cleaned = String(name || '').trim();
+        if (cleaned && !seen.has(cleaned)) {
+          seen.add(cleaned);
+          lessons.push(cleaned);
+        }
+      });
+      if (lessons.length === 0) {
+        lessons.push(DEFAULT_LESSON);
+      }
+      return lessons;
+    }
+
+    function countQuestionsInLesson(lessonName) {
+      if (lessonName === 'ALL') return state.questions.length;
+      return state.questions.filter((q) => normalizeLessonName(q.lesson) === lessonName).length;
+    }
+
+    function getQuizPoolQuestions() {
+      if (state.selectedQuizLesson === 'ALL') return state.questions;
+      return state.questions.filter((q) => normalizeLessonName(q.lesson) === state.selectedQuizLesson);
+    }
+
+    // =========================================================================
+    // 4. TIỆN ÍCH HÌNH ẢNH, THÔNG BÁO TOAST & MODAL TỰ THIẾT KẾ
+    // =========================================================================
+    function compressImageFileToDataUrl(file, maxDimension, quality) {
+      const maxDim = maxDimension || 960;
+      const qual = quality || 0.8;
+      return new Promise((resolve, reject) => {
+        if (!file || !file.type || !file.type.startsWith('image/')) {
+          reject(new Error('Tệp không phải là hình ảnh hợp lệ.'));
+          return;
+        }
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('Không thể đọc tệp hình ảnh.'));
+        reader.onload = (ev) => {
+          const img = new Image();
+          img.onerror = () => reject(new Error('Không thể giải mã hình ảnh.'));
+          img.onload = () => {
+            try {
+              let width = img.width;
+              let height = img.height;
+              if (width > maxDim || height > maxDim) {
+                const ratio = Math.min(maxDim / width, maxDim / height);
+                width = Math.max(1, Math.round(width * ratio));
+                height = Math.max(1, Math.round(height * ratio));
+              }
+
+              const canvas = document.createElement('canvas');
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(0, 0, width, height);
+              ctx.drawImage(img, 0, 0, width, height);
+
+              const compressed = canvas.toDataURL('image/jpeg', qual);
+              const sizeKb = Math.max(1, Math.round((compressed.length * 3) / 4 / 1024));
+              resolve({ dataUrl: compressed, width, height, sizeKb });
+            } catch (err) {
+              reject(err);
+            }
+          };
+          img.src = String(ev.target.result || '');
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function updateFormImagePreview(src, infoText) {
+      const cleanSrc = String(src || '').trim();
+      state.currentFormImage = cleanSrc;
+      const wrapper = document.getElementById('image-preview-wrapper');
+      const imgEl = document.getElementById('image-preview-img');
+      const infoEl = document.getElementById('image-preview-info');
+      if (!wrapper || !imgEl || !infoEl) return;
+
+      if (!cleanSrc) {
+        wrapper.classList.add('hidden');
+        imgEl.removeAttribute('src');
+        infoEl.textContent = '';
+        return;
+      }
+
+      imgEl.onerror = () => {
+        imgEl.onerror = null;
+        imgEl.src = IMAGE_FALLBACK_URL;
+        infoEl.textContent = '⚠️ Không tải được ảnh từ đường dẫn này — hãy kiểm tra lại link.';
+      };
+      imgEl.src = cleanSrc;
+      infoEl.textContent = infoText || (cleanSrc.startsWith('data:image/')
+        ? '✓ Đã đính kèm ảnh (nhúng trực tiếp vào dữ liệu & code)'
+        : '✓ Đã đính kèm ảnh theo đường dẫn URL');
+      wrapper.classList.remove('hidden');
+    }
+
+    function openImageLightbox(src) {
+      if (!src) return;
+      const overlay = document.getElementById('image-lightbox-overlay');
+      const imgEl = document.getElementById('lightbox-img');
+      if (!overlay || !imgEl) return;
+      imgEl.onerror = () => {
+        imgEl.onerror = null;
+        imgEl.src = IMAGE_FALLBACK_URL;
+      };
+      imgEl.src = src;
+      overlay.classList.remove('hidden');
+    }
+
+    function closeImageLightbox() {
+      const overlay = document.getElementById('image-lightbox-overlay');
+      const imgEl = document.getElementById('lightbox-img');
+      if (overlay) overlay.classList.add('hidden');
+      if (imgEl) imgEl.removeAttribute('src');
+    }
+
+    function showToast(message, type) {
+      const toastType = type || 'success';
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+
+      const styles = {
+        success: 'bg-emerald-600 border-emerald-300 text-white',
+        error: 'bg-rose-600 border-rose-300 text-white',
+        info: 'bg-indigo-600 border-indigo-300 text-white',
+        warning: 'bg-amber-500 border-amber-200 text-purple-950'
+      };
+      const icons = {
+        success: '✅',
+        error: '❌',
+        info: '💡',
+        warning: '⚠️'
+      };
+
+      const toast = document.createElement('div');
+      toast.className = 'pointer-events-auto flex items-start gap-2.5 px-4 py-3.5 rounded-2xl border-2 shadow-xl text-[18px] font-bold animate-fade-up ' + (styles[toastType] || styles.info);
+      toast.innerHTML = '<span class="shrink-0">' + (icons[toastType] || '💡') + '</span><span>' + escapeHtml(message) + '</span>';
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(20px)';
+        setTimeout(() => toast.remove(), 320);
+      }, 3800);
+    }
+
+    // Modal xác nhận tùy chỉnh (hỗ trợ tùy chọn ô nhập text cho việc đổi tên bài học)
+    function showConfirmModal(options) {
+      const opts = options || {};
+      const overlay = document.getElementById('custom-modal-overlay');
+      const titleEl = document.getElementById('modal-title');
+      const msgEl = document.getElementById('modal-message');
+      const iconEl = document.getElementById('modal-icon');
+      const confirmBtn = document.getElementById('modal-confirm-btn');
+      const modalInput = document.getElementById('modal-input');
+
+      titleEl.textContent = opts.title || 'Xác nhận thao tác';
+      msgEl.textContent = opts.message || '';
+      iconEl.textContent = opts.icon || '⚠️';
+      confirmBtn.textContent = opts.confirmText || 'Xác nhận';
+
+      if (opts.withInput) {
+        modalInput.classList.remove('hidden');
+        modalInput.value = opts.initialValue || '';
+        modalInput.placeholder = opts.inputPlaceholder || '';
+      } else {
+        modalInput.classList.add('hidden');
+        modalInput.value = '';
+      }
+
+      if (opts.confirmColor === 'primary') {
+        confirmBtn.className = 'btn-vibrant px-5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold text-[18px] shadow-md cursor-pointer';
+      } else {
+        confirmBtn.className = 'btn-vibrant px-5 py-2.5 rounded-2xl bg-gradient-to-r from-rose-500 to-red-600 text-white font-bold text-[18px] shadow-md cursor-pointer';
+      }
+
+      state.modalConfirmCallback = opts.onConfirm || null;
+      overlay.classList.remove('hidden');
+      if (opts.withInput) {
+        setTimeout(() => modalInput.focus(), 50);
+      }
+    }
+
+    function closeConfirmModal() {
+      document.getElementById('custom-modal-overlay').classList.add('hidden');
+      state.modalConfirmCallback = null;
+    }
+
+    function setSyncStatus(status, customText) {
+      const dot = document.getElementById('sync-status-dot');
+      const text = document.getElementById('sync-status-text');
+      const badge = document.getElementById('sync-status-badge');
+      if (!dot || !text || !badge) return;
+
+      if (status === 'saved') {
+        dot.className = 'w-3 h-3 rounded-full bg-emerald-500';
+        badge.className = 'inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/95 text-emerald-800 font-bold text-[17px] shadow-md';
+        text.textContent = customText || 'Đã tự động lưu';
+      } else if (status === 'saving') {
+        dot.className = 'w-3 h-3 rounded-full bg-amber-500 animate-pulse';
+        badge.className = 'inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/95 text-amber-800 font-bold text-[17px] shadow-md';
+        text.textContent = customText || 'Đang tự động lưu...';
+      } else if (status === 'code-only') {
+        dot.className = 'w-3 h-3 rounded-full bg-sky-500';
+        badge.className = 'inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/95 text-sky-900 font-bold text-[17px] shadow-md';
+        text.textContent = customText || 'Dữ liệu tích hợp trong code';
+      } else if (status === 'error') {
+        dot.className = 'w-3 h-3 rounded-full bg-rose-500';
+        badge.className = 'inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/95 text-rose-800 font-bold text-[17px] shadow-md';
+        text.textContent = customText || 'Chế độ ngoại tuyến';
+      }
+    }
+
+    function setUnsavedLocalState(isUnsaved) {
+      state.hasUnsavedLocalChanges = Boolean(isUnsaved);
+      const banner = document.getElementById('unsaved-local-banner');
+      if (!banner) return;
+      if (state.hasUnsavedLocalChanges && !state.cloudEnabled && !state.drive.connected) {
+        banner.classList.remove('hidden');
+      } else {
+        banner.classList.add('hidden');
+      }
+    }
+
+    // =========================================================================
+    // 5. KẾT NỐI FIREBASE FIRESTORE (NẠP ĐỘNG AN TOÀN KHI CÓ CẤU HÌNH)
+    // =========================================================================
+    function getQuestionsCollectionRef() {
+      if (!state.db || !state.user || !fb.collection) return null;
+      return fb.collection(state.db, 'artifacts', state.appId, 'users', state.user.uid, 'quiz_questions');
+    }
+
+    function getMetaDocRef() {
+      if (!state.db || !state.user || !fb.doc) return null;
+      return fb.doc(state.db, 'artifacts', state.appId, 'users', state.user.uid, 'quiz_meta', 'settings');
+    }
+
+    function buildFirestorePayload(qObj) {
+      return {
+        lesson: normalizeLessonName(qObj.lesson),
+        question: qObj.question,
+        options: qObj.options,
+        correct: qObj.correct,
+        explanation: qObj.explanation || '',
+        image: qObj.image || '',
+        createdAt: qObj.createdAt || Date.now()
+      };
+    }
+
+    async function flushPendingCloudOps() {
+      if (!state.cloudEnabled || !state.user || !state.db || !fb.writeBatch || state.pendingCloudOps.length === 0) return;
+
+      const ops = [...state.pendingCloudOps];
+      state.pendingCloudOps = [];
+      const colRef = getQuestionsCollectionRef();
+      const metaRef = getMetaDocRef();
+
+      try {
+        setSyncStatus('saving', 'Đang đồng bộ thay đổi...');
+        for (const op of ops) {
+          if (op.type === 'save') {
+            const batch = fb.writeBatch(state.db);
+            batch.set(fb.doc(colRef, op.item.id), buildFirestorePayload(op.item));
+            batch.set(metaRef, { initialized: true, updatedAt: Date.now() }, { merge: true });
+            await batch.commit();
+          } else if (op.type === 'saveMany') {
+            const chunkSize = 400;
+            for (let i = 0; i < op.items.length; i += chunkSize) {
+              const chunk = op.items.slice(i, i + chunkSize);
+              const batch = fb.writeBatch(state.db);
+              chunk.forEach((qObj) => {
+                batch.set(fb.doc(colRef, qObj.id), buildFirestorePayload(qObj));
+              });
+              batch.set(metaRef, { initialized: true, updatedAt: Date.now() }, { merge: true });
+              await batch.commit();
+            }
+          } else if (op.type === 'delete') {
+            const batch = fb.writeBatch(state.db);
+            batch.delete(fb.doc(colRef, op.id));
+            batch.set(metaRef, { initialized: true, updatedAt: Date.now() }, { merge: true });
+            await batch.commit();
+          } else if (op.type === 'deleteMany') {
+            const chunkSize = 400;
+            for (let i = 0; i < op.ids.length; i += chunkSize) {
+              const chunk = op.ids.slice(i, i + chunkSize);
+              const batch = fb.writeBatch(state.db);
+              chunk.forEach((id) => batch.delete(fb.doc(colRef, id)));
+              batch.set(metaRef, { initialized: true, updatedAt: Date.now() }, { merge: true });
+              await batch.commit();
+            }
+            if (op.ids.length === 0) {
+              await fb.setDoc(metaRef, { initialized: true, updatedAt: Date.now() }, { merge: true });
+            }
+          }
+        }
+        setSyncStatus('saved', 'Đã tự động lưu');
+      } catch (err) {
+        console.error('Lỗi đồng bộ hàng đợi Firestore:', err);
+        setSyncStatus('error', 'Lỗi đồng bộ — Hãy tải file HTML để lưu');
+      }
+    }
+
+    async function initCloudStorage() {
+      let firebaseConfig = null;
+      try {
+        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+          firebaseConfig = typeof __firebase_config === 'string'
+            ? JSON.parse(__firebase_config)
+            : __firebase_config;
+        }
+      } catch (e) {
+        console.warn('Không thể đọc cấu hình Firebase:', e);
+      }
+
+      if (!firebaseConfig || !firebaseConfig.apiKey) {
+        state.cloudEnabled = false;
+        state.cloudInitializing = false;
+        if (state.drive.connected) {
+          return;
+        }
+        if (state.hasUnsavedLocalChanges) {
+          setSyncStatus('saving', 'Chỉ lưu máy này — Đăng nhập Drive để đồng bộ');
+        } else if (EMBEDDED_DATA_UPDATED_AT > 0) {
+          setSyncStatus('saved', 'Đang đọc từ file HTML (Chưa kết nối Drive)');
+        } else {
+          setSyncStatus(
+            'code-only',
+            state.localStorageAvailable
+              ? 'Chưa kết nối Google Drive (Lưu tạm trên máy)'
+              : 'Chưa kết nối Google Drive'
+          );
+        }
+        return;
+      }
+
+      try {
+        state.cloudInitializing = true;
+        setSyncStatus('saving', 'Đang kết nối tự động lưu...');
+
+        const [appMod, authMod, fsMod] = await Promise.all([
+          import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js'),
+          import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js'),
+          import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js')
+        ]);
+
+        fb.collection = fsMod.collection;
+        fb.doc = fsMod.doc;
+        fb.getDoc = fsMod.getDoc;
+        fb.setDoc = fsMod.setDoc;
+        fb.onSnapshot = fsMod.onSnapshot;
+        fb.writeBatch = fsMod.writeBatch;
+
+        const app = appMod.initializeApp(firebaseConfig);
+        state.auth = authMod.getAuth(app);
+        state.db = fsMod.getFirestore(app);
+
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          const cred = await authMod.signInWithCustomToken(state.auth, __initial_auth_token);
+          state.user = cred.user;
+        } else {
+          const cred = await authMod.signInAnonymously(state.auth);
+          state.user = cred.user;
+        }
+
+        if (!state.user) {
+          state.cloudInitializing = false;
+          setSyncStatus('code-only', 'Chế độ cục bộ trong code');
+          return;
+        }
+
+        state.cloudEnabled = true;
+
+        const metaRef = getMetaDocRef();
+        const colRef = getQuestionsCollectionRef();
+        let metaReadSucceeded = false;
+        let metaExists = false;
+        try {
+          const metaSnap = await fb.getDoc(metaRef);
+          metaReadSucceeded = true;
+          metaExists = metaSnap.exists();
+        } catch (err) {
+          console.warn('Không đọc được meta doc:', err);
+        }
+
+        if (state.pendingCloudOps.length > 0) {
+          if (!metaExists) {
+            const batch = fb.writeBatch(state.db);
+            state.questions.forEach((q) => {
+              batch.set(fb.doc(colRef, q.id), buildFirestorePayload(q));
+            });
+            batch.set(metaRef, { initialized: true, updatedAt: Date.now() });
+            await batch.commit();
+            state.pendingCloudOps = [];
+            metaExists = true;
+          } else {
+            await flushPendingCloudOps();
+          }
+          state.hasCheckedInitialSeed = true;
+        }
+
+        state.cloudInitializing = false;
+        setUnsavedLocalState(false);
+
+        state.unsubscribeSnapshot = fb.onSnapshot(
+          colRef,
+          async (snapshot) => {
+            const loaded = [];
+            snapshot.forEach((docSnap) => {
+              const d = docSnap.data();
+              if (d && d.question && Array.isArray(d.options) && d.options.length === 4) {
+                loaded.push({
+                  id: docSnap.id,
+                  lesson: normalizeLessonName(d.lesson),
+                  question: String(d.question),
+                  options: d.options.map((x) => String(x)),
+                  correct: Number(d.correct) || 0,
+                  explanation: String(d.explanation || ''),
+                  image: String(d.image || ''),
+                  createdAt: typeof d.createdAt === 'number' ? d.createdAt : 0
+                });
+              }
+            });
+
+            if (!state.hasCheckedInitialSeed) {
+              state.hasCheckedInitialSeed = true;
+              if (loaded.length === 0 && metaReadSucceeded && !metaExists && DEFAULT_QUESTIONS.length > 0) {
+                try {
+                  setSyncStatus('saving', 'Đang khởi tạo kho câu hỏi...');
+                  const batch = fb.writeBatch(state.db);
+                  DEFAULT_QUESTIONS.forEach((q) => {
+                    batch.set(fb.doc(colRef, q.id), buildFirestorePayload(q));
+                  });
+                  batch.set(metaRef, { initialized: true, updatedAt: Date.now() });
+                  await batch.commit();
+                  metaExists = true;
+                  setSyncStatus('saved', 'Đã tự động lưu');
+                  return;
+                } catch (seedErr) {
+                  console.error('Lỗi khi khởi tạo câu mẫu lên Firestore:', seedErr);
+                }
+              }
+            }
+
+            loaded.sort((a, b) => a.createdAt - b.createdAt);
+            state.questions = loaded;
+            saveQuestionsToLocalStorage({ unsavedToFile: false });
+            syncQuizOrderWithQuestions();
+            renderAll();
+            setSyncStatus('saved', 'Đã tự động lưu');
+          },
+          (error) => {
+            console.error('Lỗi đồng bộ Firestore:', error);
+            setSyncStatus('error', 'Lỗi đồng bộ — Hãy tải file HTML để lưu');
+          }
+        );
+      } catch (err) {
+        console.error('Không thể khởi tạo Firebase:', err);
+        state.cloudEnabled = false;
+        state.cloudInitializing = false;
+        setSyncStatus('code-only', 'Chạy ngoại tuyến (Liên kết / Tải HTML để lưu)');
+      }
+    }
+
+    async function handleOfflinePersistenceAfterChange() {
+      if (state.drive.connected) {
+        scheduleDriveAutoSync(0);
+        if (state.linkedFileHandle) {
+          await autoSaveToLinkedHtmlFile();
+        }
+        return;
+      }
+      if (state.linkedFileHandle) {
+        const ok = await autoSaveToLinkedHtmlFile();
+        if (ok) return;
+      }
+      setUnsavedLocalState(true);
+      const savedInBrowser = saveQuestionsToLocalStorage({ unsavedToFile: true });
+      setSyncStatus(
+        savedInBrowser ? 'saving' : 'code-only',
+        savedInBrowser
+          ? 'Đã lưu tạm trên máy (Đăng nhập Drive để đồng bộ)'
+          : 'Chưa ghi vào file HTML — Nhấn tải / liên kết!'
+      );
+    }
+
+    async function persistSaveQuestion(qObj) {
+      const cleanQ = {
+        ...qObj,
+        lesson: normalizeLessonName(qObj.lesson)
+      };
+      const existingIdx = state.questions.findIndex((item) => item.id === cleanQ.id);
+      if (existingIdx >= 0) {
+        state.questions[existingIdx] = cleanQ;
+      } else {
+        state.questions.push(cleanQ);
+      }
+      syncQuizOrderWithQuestions();
+      renderAll();
+
+      if (state.cloudInitializing) {
+        saveQuestionsToLocalStorage({ unsavedToFile: true });
+        state.pendingCloudOps.push({ type: 'save', item: cleanQ });
+        return;
+      }
+
+      if (!state.cloudEnabled || !state.user || !state.db || !fb.writeBatch) {
+        await handleOfflinePersistenceAfterChange();
+        return;
+      }
+
+      try {
+        setSyncStatus('saving', 'Đang tự động lưu...');
+        const colRef = getQuestionsCollectionRef();
+        const metaRef = getMetaDocRef();
+        const batch = fb.writeBatch(state.db);
+        batch.set(fb.doc(colRef, cleanQ.id), buildFirestorePayload(cleanQ));
+        batch.set(metaRef, { initialized: true, updatedAt: Date.now() }, { merge: true });
+        await batch.commit();
+        saveQuestionsToLocalStorage({ unsavedToFile: false });
+        if (state.linkedFileHandle) await autoSaveToLinkedHtmlFile();
+        setSyncStatus('saved', 'Đã tự động lưu');
+      } catch (err) {
+        console.error('Lỗi lưu câu hỏi lên Firestore:', err);
+        saveQuestionsToLocalStorage({ unsavedToFile: true });
+        setSyncStatus('error', 'Lưu tạm trong phiên — Hãy tải file HTML');
+      }
+    }
+
+    async function persistSaveManyQuestions(newQuestionsList) {
+      if (!newQuestionsList.length) return;
+
+      const normalizedList = newQuestionsList.map((qObj) => ({
+        ...qObj,
+        lesson: normalizeLessonName(qObj.lesson)
+      }));
+
+      normalizedList.forEach((qObj) => {
+        const idx = state.questions.findIndex((item) => item.id === qObj.id);
+        if (idx >= 0) {
+          state.questions[idx] = qObj;
+        } else {
+          state.questions.push(qObj);
+        }
+      });
+      syncQuizOrderWithQuestions();
+      renderAll();
+
+      if (state.cloudInitializing) {
+        saveQuestionsToLocalStorage({ unsavedToFile: true });
+        state.pendingCloudOps.push({ type: 'saveMany', items: normalizedList });
+        return;
+      }
+
+      if (!state.cloudEnabled || !state.user || !state.db || !fb.writeBatch) {
+        await handleOfflinePersistenceAfterChange();
+        return;
+      }
+
+      try {
+        setSyncStatus('saving', 'Đang lưu hàng loạt...');
+        const colRef = getQuestionsCollectionRef();
+        const metaRef = getMetaDocRef();
+        const chunkSize = 400;
+        for (let i = 0; i < normalizedList.length; i += chunkSize) {
+          const chunk = normalizedList.slice(i, i + chunkSize);
+          const batch = fb.writeBatch(state.db);
+          chunk.forEach((qObj) => {
+            batch.set(fb.doc(colRef, qObj.id), buildFirestorePayload(qObj));
+          });
+          batch.set(metaRef, { initialized: true, updatedAt: Date.now() }, { merge: true });
+          await batch.commit();
+        }
+        saveQuestionsToLocalStorage({ unsavedToFile: false });
+        if (state.linkedFileHandle) await autoSaveToLinkedHtmlFile();
+        setSyncStatus('saved', 'Đã tự động lưu');
+      } catch (err) {
+        console.error('Lỗi lưu hàng loạt lên Firestore:', err);
+        saveQuestionsToLocalStorage({ unsavedToFile: true });
+        setSyncStatus('error', 'Lưu tạm — Hãy tải file HTML');
+      }
+    }
+
+    async function persistDeleteQuestion(id) {
+      state.questions = state.questions.filter((q) => q.id !== id);
+      delete state.userAnswers[id];
+      syncQuizOrderWithQuestions();
+      renderAll();
+
+      if (state.cloudInitializing) {
+        saveQuestionsToLocalStorage({ unsavedToFile: true });
+        state.pendingCloudOps.push({ type: 'delete', id });
+        return;
+      }
+
+      if (!state.cloudEnabled || !state.user || !state.db || !fb.writeBatch) {
+        await handleOfflinePersistenceAfterChange();
+        return;
+      }
+
+      try {
+        setSyncStatus('saving', 'Đang cập nhật xóa...');
+        const colRef = getQuestionsCollectionRef();
+        const metaRef = getMetaDocRef();
+        const batch = fb.writeBatch(state.db);
+        batch.delete(fb.doc(colRef, id));
+        batch.set(metaRef, { initialized: true, updatedAt: Date.now() }, { merge: true });
+        await batch.commit();
+        saveQuestionsToLocalStorage({ unsavedToFile: false });
+        if (state.linkedFileHandle) await autoSaveToLinkedHtmlFile();
+        setSyncStatus('saved', 'Đã tự động lưu');
+      } catch (err) {
+        console.error('Lỗi xóa câu hỏi trên Firestore:', err);
+        saveQuestionsToLocalStorage({ unsavedToFile: true });
+        setSyncStatus('error', 'Lỗi đồng bộ xóa');
+      }
+    }
+
+    async function persistDeleteManyQuestions(idsToDelete) {
+      if (!Array.isArray(idsToDelete) || idsToDelete.length === 0) return;
+      const deleteSet = new Set(idsToDelete);
+      state.questions = state.questions.filter((q) => !deleteSet.has(q.id));
+      idsToDelete.forEach((id) => {
+        delete state.userAnswers[id];
+      });
+      state.reviewWrongMode = false;
+      syncQuizOrderWithQuestions();
+      renderAll();
+
+      if (state.cloudInitializing) {
+        saveQuestionsToLocalStorage({ unsavedToFile: true });
+        state.pendingCloudOps.push({ type: 'deleteMany', ids: idsToDelete });
+        return;
+      }
+
+      if (!state.cloudEnabled || !state.user || !state.db || !fb.writeBatch) {
+        await handleOfflinePersistenceAfterChange();
+        return;
+      }
+
+      try {
+        setSyncStatus('saving', 'Đang xóa câu hỏi...');
+        const colRef = getQuestionsCollectionRef();
+        const metaRef = getMetaDocRef();
+        const chunkSize = 400;
+        for (let i = 0; i < idsToDelete.length; i += chunkSize) {
+          const chunk = idsToDelete.slice(i, i + chunkSize);
+          const batch = fb.writeBatch(state.db);
+          chunk.forEach((id) => batch.delete(fb.doc(colRef, id)));
+          batch.set(metaRef, { initialized: true, updatedAt: Date.now() }, { merge: true });
+          await batch.commit();
+        }
+        saveQuestionsToLocalStorage({ unsavedToFile: false });
+        if (state.linkedFileHandle) await autoSaveToLinkedHtmlFile();
+        setSyncStatus('saved', 'Đã tự động lưu');
+      } catch (err) {
+        console.error('Lỗi xóa nhiều câu hỏi trên Firestore:', err);
+        saveQuestionsToLocalStorage({ unsavedToFile: true });
+        setSyncStatus('error', 'Lỗi đồng bộ xóa');
+      }
+    }
+
+    // Đổi tên một bài học cho toàn bộ câu hỏi thuộc bài đó
+    async function renameLessonEverywhere(oldName, newName) {
+      const cleanedNew = normalizeLessonName(newName);
+      if (cleanedNew === oldName) return;
+
+      const updatedItems = state.questions
+        .filter((q) => normalizeLessonName(q.lesson) === oldName)
+        .map((q) => ({ ...q, lesson: cleanedNew }));
+
+      state.customLessons = state.customLessons.map((item) => (item === oldName ? cleanedNew : item));
+      if (!state.customLessons.includes(cleanedNew) && updatedItems.length === 0) {
+        state.customLessons.push(cleanedNew);
+      }
+
+      if (state.selectedQuizLesson === oldName) state.selectedQuizLesson = cleanedNew;
+      if (state.selectedBankLesson === oldName) state.selectedBankLesson = cleanedNew;
+
+      if (updatedItems.length > 0) {
+        await persistSaveManyQuestions(updatedItems);
+      } else {
+        await handleOfflinePersistenceAfterChange();
+        renderAll();
+      }
+      showToast('Đã đổi tên bài thành "' + cleanedNew + '"!', 'success');
+    }
+
+    // Xóa bộ nhớ tạm trình duyệt và nạp lại đúng danh sách câu hỏi nằm trong mã nguồn file HTML này
+    function reloadFromEmbeddedHtmlCode() {
+      showConfirmModal({
+        title: 'Nạp lại từ code gốc của file HTML?',
+        message: 'Thao tác này sẽ xóa bộ nhớ tạm trình duyệt và hiển thị đúng ' + DEFAULT_QUESTIONS.length + ' câu hỏi đang được nhúng bên trong file HTML hiện tại.',
+        confirmText: 'Nạp lại ngay',
+        icon: '🔄',
+        confirmColor: 'primary',
+        onConfirm: () => {
+          try {
+            window.localStorage.removeItem(LOCAL_STORAGE_KEY);
+            window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+          } catch (e) {
+            console.warn('Không thể xóa localStorage:', e);
+          }
+          state.questions = cloneQuestions(DEFAULT_QUESTIONS);
+          state.customLessons = [];
+          state.selectedQuizLesson = 'ALL';
+          state.selectedBankLesson = 'ALL';
+          state.userAnswers = {};
+          state.reviewWrongMode = false;
+          setUnsavedLocalState(false);
+          saveQuestionsToLocalStorage({
+            updatedAt: EMBEDDED_DATA_UPDATED_AT || Date.now(),
+            baseVersion: EMBEDDED_DATA_UPDATED_AT,
+            unsavedToFile: false
+          });
+          syncQuizOrderWithQuestions();
+          renderAll();
+          setSyncStatus('saved', 'Đã nạp đúng dữ liệu từ file HTML');
+          showToast('Đã nạp lại toàn bộ ' + state.questions.length + ' câu hỏi từ mã nguồn file HTML!', 'success');
+        }
+      });
+    }
+
+    // =========================================================================
+    // 6. ĐỒNG BỘ THỨ TỰ BÀI LÀM & LOGIC LÀM BÀI TRẮC NGHIỆM THEO BÀI
+    // =========================================================================
+    function shuffleArray(list) {
+      const copy = [...list];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const temp = copy[i];
+        copy[i] = copy[j];
+        copy[j] = temp;
+      }
+      return copy;
+    }
+
+    function syncQuizOrderWithQuestions() {
+      const lessons = getLessonList();
+      if (state.selectedQuizLesson !== 'ALL' && !lessons.includes(state.selectedQuizLesson)) {
+        state.selectedQuizLesson = 'ALL';
+      }
+      if (state.selectedBankLesson !== 'ALL' && !lessons.includes(state.selectedBankLesson)) {
+        state.selectedBankLesson = 'ALL';
+      }
+
+      const pool = getQuizPoolQuestions();
+      const validIds = pool.map((q) => q.id);
+      const validSet = new Set(validIds);
+
+      if (state.reviewWrongMode) {
+        state.quizOrder = state.quizOrder.filter((id) => validSet.has(id));
+        if (state.quizOrder.length === 0) {
+          state.reviewWrongMode = false;
+          state.quizOrder = [...validIds];
+        }
+      } else {
+        const kept = state.quizOrder.filter((id) => validSet.has(id));
+        const keptSet = new Set(kept);
+        const newlyAdded = validIds.filter((id) => !keptSet.has(id));
+        state.quizOrder = [...kept, ...newlyAdded];
+      }
+
+      if (state.quizOrder.length === 0) {
+        state.currentIndex = 0;
+      } else if (state.currentIndex >= state.quizOrder.length) {
+        state.currentIndex = state.quizOrder.length - 1;
+      } else if (state.currentIndex < 0) {
+        state.currentIndex = 0;
+      }
+    }
+
+    function selectQuizLesson(lessonName) {
+      state.selectedQuizLesson = lessonName;
+      state.reviewWrongMode = false;
+      const pool = getQuizPoolQuestions();
+      state.quizOrder = pool.map((q) => q.id);
+      state.currentIndex = 0;
+      renderLessonControls();
+      renderQuizSection();
+    }
+
+    function goToQuestion(index) {
+      if (index < 0 || index >= state.quizOrder.length) return;
+      state.currentIndex = index;
+      renderQuizSection();
+    }
+
+    function handleSelectAnswer(questionId, optionIndex) {
+      if (!questionId || state.userAnswers[questionId] !== undefined) return;
+      const q = getQuestionById(questionId);
+      if (!q) return;
+
+      state.userAnswers[questionId] = optionIndex;
+      renderQuizSection();
+    }
+
+    function restartQuiz(shouldShuffle) {
+      const pool = getQuizPoolQuestions();
+      if (pool.length === 0) {
+        showToast('Mục đang chọn chưa có câu hỏi nào, hãy thêm câu hỏi hoặc chọn bài khác nhé!', 'warning');
+        return;
+      }
+
+      state.reviewWrongMode = false;
+      pool.forEach((q) => {
+        delete state.userAnswers[q.id];
+      });
+      const poolIds = pool.map((q) => q.id);
+      state.quizOrder = shouldShuffle ? shuffleArray(poolIds) : poolIds;
+      state.currentIndex = 0;
+      renderQuizSection();
+      showToast(
+        shouldShuffle ? 'Đã trộn ngẫu nhiên thứ tự câu hỏi và bắt đầu lại!' : 'Đã đặt lại bài làm từ đầu!',
+        'info'
+      );
+    }
+
+    function startReviewWrongMode() {
+      const wrongIds = state.quizOrder.filter((id) => {
+        const q = getQuestionById(id);
+        const ans = state.userAnswers[id];
+        return q && ans !== undefined && ans !== q.correct;
+      });
+
+      if (wrongIds.length === 0) {
+        showToast('Tuyệt vời! Bạn không có câu nào làm sai.', 'success');
+        return;
+      }
+
+      state.reviewWrongMode = true;
+      wrongIds.forEach((id) => {
+        delete state.userAnswers[id];
+      });
+      state.quizOrder = wrongIds;
+      state.currentIndex = 0;
+      renderQuizSection();
+      showToast('Bắt đầu ôn lại ' + wrongIds.length + ' câu làm sai!', 'info');
+    }
+
+    function exitReviewWrongMode() {
+      state.reviewWrongMode = false;
+      state.quizOrder = getQuizPoolQuestions().map((q) => q.id);
+      state.currentIndex = 0;
+      renderQuizSection();
+    }
+
+    // =========================================================================
+    // 7. HIỂN THỊ BỘ CHỌN BÀI HỌC & GIAO DIỆN LÀM BÀI TRẮC NGHIỆM
+    // =========================================================================
+    function renderLessonControls() {
+      const lessons = getLessonList();
+
+      // Cập nhật datalist gợi ý cho ô nhập bài học
+      const datalist = document.getElementById('lesson-suggestions');
+      if (datalist) {
+        datalist.innerHTML = lessons
+          .map((name) => '<option value="' + escapeHtml(name) + '"></option>')
+          .join('');
+      }
+
+      // Cập nhật dropdown chọn bài ở Tab Làm bài
+      const quizSelect = document.getElementById('quiz-lesson-select');
+      if (quizSelect) {
+        let html = '<option value="ALL">🌈 Tất cả các bài (' + state.questions.length + ' câu)</option>';
+        lessons.forEach((name) => {
+          const count = countQuestionsInLesson(name);
+          html += '<option value="' + escapeHtml(name) + '">📖 ' + escapeHtml(name) + ' (' + count + ' câu)</option>';
+        });
+        quizSelect.innerHTML = html;
+        quizSelect.value = state.selectedQuizLesson;
+      }
+
+      // Cập nhật dãy nút chọn nhanh bài học ở Tab Làm bài
+      const chipsWrap = document.getElementById('quiz-lesson-chips');
+      if (chipsWrap) {
+        chipsWrap.innerHTML = '';
+        const allItems = [{ key: 'ALL', label: '🌈 Tất cả', count: state.questions.length }].concat(
+          lessons.map((name) => ({ key: name, label: '📖 ' + name, count: countQuestionsInLesson(name) }))
+        );
+
+        allItems.forEach((item) => {
+          const isActive = state.selectedQuizLesson === item.key;
+          const chip = document.createElement('button');
+          chip.type = 'button';
+          chip.className = isActive
+            ? 'btn-vibrant px-4 py-1.5 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold text-[17px] shadow-md cursor-pointer'
+            : 'btn-vibrant px-4 py-1.5 rounded-full bg-white border-2 border-purple-200 text-purple-900 hover:border-pink-400 font-bold text-[17px] cursor-pointer';
+          chip.textContent = item.label + ' (' + item.count + ')';
+          chip.addEventListener('click', () => selectQuizLesson(item.key));
+          chipsWrap.appendChild(chip);
+        });
+      }
+
+      // Cập nhật dropdown lọc bài ở Tab Ngân hàng câu hỏi
+      const bankSelect = document.getElementById('bank-lesson-filter');
+      if (bankSelect) {
+        let html = '<option value="ALL">🌈 Tất cả các bài (' + state.questions.length + ' câu)</option>';
+        lessons.forEach((name) => {
+          const count = countQuestionsInLesson(name);
+          html += '<option value="' + escapeHtml(name) + '">📖 ' + escapeHtml(name) + ' (' + count + ' câu)</option>';
+        });
+        bankSelect.innerHTML = html;
+        bankSelect.value = state.selectedBankLesson;
+      }
+
+      // Cập nhật nút quản lý các bài học ở Tab Ngân hàng
+      const managerWrap = document.getElementById('bank-lessons-manager');
+      if (managerWrap) {
+        managerWrap.innerHTML = '';
+        lessons.forEach((name) => {
+          const count = countQuestionsInLesson(name);
+          const isSelected = state.selectedBankLesson === name;
+          const itemBox = document.createElement('div');
+          itemBox.className = isSelected
+            ? 'inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-purple-100 border-2 border-purple-500 text-purple-950 font-bold text-[17px] shadow-sm'
+            : 'inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white border-2 border-purple-200 text-purple-900 font-bold text-[17px]';
+
+          const filterBtn = document.createElement('button');
+          filterBtn.type = 'button';
+          filterBtn.className = 'cursor-pointer hover:text-pink-600 text-left';
+          filterBtn.textContent = '📖 ' + name + ' (' + count + ' câu)';
+          filterBtn.title = 'Nhấn để lọc xem các câu thuộc bài này';
+          filterBtn.addEventListener('click', () => {
+            state.selectedBankLesson = isSelected ? 'ALL' : name;
+            const singleLessonInput = document.getElementById('input-question-lesson');
+            const bulkLessonInput = document.getElementById('input-bulk-lesson');
+            if (singleLessonInput && !document.getElementById('editing-question-id').value) {
+              singleLessonInput.value = name;
+            }
+            if (bulkLessonInput) {
+              bulkLessonInput.value = name;
+            }
+            renderLessonControls();
+            renderBankList();
+          });
+
+          const renameBtn = document.createElement('button');
+          renameBtn.type = 'button';
+          renameBtn.className = 'px-2 py-0.5 rounded-lg bg-amber-100 border border-amber-400 text-amber-900 text-[15px] cursor-pointer hover:bg-amber-200';
+          renameBtn.textContent = '✏️ Đổi tên';
+          renameBtn.title = 'Đổi tên bài học này cho toàn bộ câu hỏi bên trong';
+          renameBtn.addEventListener('click', () => {
+            showConfirmModal({
+              title: 'Đổi tên bài học',
+              message: 'Nhập tên mới cho "' + name + '" (toàn bộ ' + count + ' câu hỏi thuộc bài này sẽ tự động cập nhật):',
+              confirmText: 'Lưu tên mới',
+              icon: '✏️',
+              confirmColor: 'primary',
+              withInput: true,
+              initialValue: name,
+              inputPlaceholder: 'Nhập tên bài học mới...',
+              onConfirm: async (newVal) => {
+                const trimmed = String(newVal || '').trim();
+                if (!trimmed) {
+                  showToast('Tên bài học không được để trống!', 'warning');
+                  return;
+                }
+                await renameLessonEverywhere(name, trimmed);
+              }
+            });
+          });
+
+          itemBox.appendChild(filterBtn);
+          itemBox.appendChild(renameBtn);
+          managerWrap.appendChild(itemBox);
+        });
+      }
+
+      // Điền sẵn tên bài mặc định vào form nếu đang trống
+      const singleLessonEl = document.getElementById('input-question-lesson');
+      const bulkLessonEl = document.getElementById('input-bulk-lesson');
+      const fallbackLesson = state.selectedBankLesson !== 'ALL' ? state.selectedBankLesson : lessons[0];
+      if (singleLessonEl && !singleLessonEl.value.trim()) {
+        singleLessonEl.value = fallbackLesson;
+      }
+      if (bulkLessonEl && !bulkLessonEl.value.trim()) {
+        bulkLessonEl.value = fallbackLesson;
+      }
+    }
+
+    function renderQuizSection() {
+      const total = state.quizOrder.length;
+      const activeContent = document.getElementById('quiz-active-content');
+      const emptyState = document.getElementById('quiz-empty-state');
+      const summaryCard = document.getElementById('quiz-summary-card');
+      const counterBadge = document.getElementById('quiz-counter-badge');
+      const reviewBadge = document.getElementById('review-mode-badge');
+      const exitReviewBtn = document.getElementById('btn-exit-review-mode');
+      const navDots = document.getElementById('question-nav-dots');
+      const prevBtn = document.getElementById('btn-prev-question');
+      const nextBtn = document.getElementById('btn-next-question');
+
+      if (state.reviewWrongMode) {
+        reviewBadge.classList.remove('hidden');
+        exitReviewBtn.classList.remove('hidden');
+      } else {
+        reviewBadge.classList.add('hidden');
+        exitReviewBtn.classList.add('hidden');
+      }
+
+      if (total === 0) {
+        activeContent.innerHTML = '';
+        activeContent.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        summaryCard.classList.add('hidden');
+        counterBadge.textContent = 'Câu 0 / 0';
+        document.getElementById('stat-correct').textContent = '0';
+        document.getElementById('stat-wrong').textContent = '0';
+        document.getElementById('stat-remaining').textContent = '0';
+        document.getElementById('quiz-progress-bar').style.width = '0%';
+        document.getElementById('quiz-progress-label').textContent = 'Đã hoàn thành: 0 / 0 câu';
+        document.getElementById('quiz-percent-label').textContent = '0%';
+        navDots.innerHTML = '';
+        prevBtn.disabled = true;
+        nextBtn.disabled = true;
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      activeContent.classList.remove('hidden');
+
+      let correctCount = 0;
+      let wrongCount = 0;
+      state.quizOrder.forEach((id) => {
+        const q = getQuestionById(id);
+        const ans = state.userAnswers[id];
+        if (q && ans !== undefined) {
+          if (ans === q.correct) correctCount++;
+          else wrongCount++;
+        }
+      });
+
+      const answeredCount = correctCount + wrongCount;
+      const remainingCount = total - answeredCount;
+      const percent = Math.round((answeredCount / total) * 100);
+
+      counterBadge.textContent = 'Câu ' + (state.currentIndex + 1) + ' / ' + total;
+      document.getElementById('stat-correct').textContent = String(correctCount);
+      document.getElementById('stat-wrong').textContent = String(wrongCount);
+      document.getElementById('stat-remaining').textContent = String(remainingCount);
+      document.getElementById('quiz-progress-bar').style.width = percent + '%';
+      document.getElementById('quiz-progress-label').textContent = 'Đã hoàn thành: ' + answeredCount + ' / ' + total + ' câu';
+      document.getElementById('quiz-percent-label').textContent = percent + '%';
+
+      // Render dãy nút số thứ tự câu hỏi
+      navDots.innerHTML = '';
+      state.quizOrder.forEach((id, idx) => {
+        const q = getQuestionById(id);
+        const ans = state.userAnswers[id];
+        const isCurrent = idx === state.currentIndex;
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = String(idx + 1);
+        btn.title = 'Chuyển tới câu ' + (idx + 1);
+
+        let colorClasses = 'bg-white text-purple-900 border-purple-200 hover:border-pink-400';
+        if (q && ans !== undefined) {
+          if (ans === q.correct) {
+            colorClasses = 'bg-emerald-500 text-white border-emerald-600';
+          } else {
+            colorClasses = 'bg-rose-500 text-white border-rose-600';
+          }
+        } else if (isCurrent) {
+          colorClasses = 'bg-gradient-to-r from-pink-500 to-purple-600 text-white border-purple-600';
+        }
+
+        const activeRing = isCurrent ? 'ring-4 ring-pink-300 scale-105 shadow-md' : '';
+        btn.className = 'btn-vibrant w-10 h-10 rounded-xl border-2 font-bold text-[17px] flex items-center justify-center cursor-pointer ' + colorClasses + ' ' + activeRing;
+        btn.addEventListener('click', () => goToQuestion(idx));
+        navDots.appendChild(btn);
+      });
+
+      const currentId = state.quizOrder[state.currentIndex];
+      const currentQ = getQuestionById(currentId);
+      if (!currentQ) return;
+
+      const selectedIdx = state.userAnswers[currentQ.id];
+      const hasAnswered = selectedIdx !== undefined;
+      const isRight = hasAnswered && selectedIdx === currentQ.correct;
+
+      const statusBadgeHtml = hasAnswered
+        ? (isRight
+          ? '<span class="px-4 py-1 rounded-full bg-green-100 border-2 border-green-500 text-green-800 font-bold text-[17px]">✓ Chính xác!</span>'
+          : '<span class="px-4 py-1 rounded-full bg-red-100 border-2 border-red-500 text-red-800 font-bold text-[17px]">✗ Chưa đúng — Đáp án đúng: ' + OPTION_LABELS[currentQ.correct] + '</span>')
+        : '<span class="px-4 py-1 rounded-full bg-purple-100 border border-purple-300 text-purple-800 font-bold text-[17px]">Chọn 1 đáp án đúng nhất</span>';
+
+      const optionsHtml = currentQ.options
+        .map((optText, idx) => {
+          const label = OPTION_LABELS[idx];
+          let cardClass = 'option-card option-card-' + label + ' bg-white border-purple-200 text-slate-900';
+          let statusIcon = '';
+
+          if (hasAnswered) {
+            if (idx === currentQ.correct) {
+              cardClass = 'option-card option-correct';
+              statusIcon = '<span class="ml-auto text-[22px] font-bold text-green-700 shrink-0 pl-2">✓</span>';
+            } else if (idx === selectedIdx) {
+              cardClass = 'option-card option-wrong';
+              statusIcon = '<span class="ml-auto text-[22px] font-bold text-red-700 shrink-0 pl-2">✗</span>';
+            } else {
+              cardClass = 'option-card option-muted text-slate-600';
+            }
+          }
+
+          return (
+            '<button type="button" data-option-index="' + idx + '" ' + (hasAnswered ? 'disabled' : '') +
+            ' class="' + cardClass + ' w-full text-left p-4 rounded-2xl border-2 flex items-center gap-3.5 ' + (hasAnswered ? 'cursor-default' : 'cursor-pointer') + '">' +
+            '<span class="option-badge badge-' + label + ' w-10 h-10 rounded-full flex items-center justify-center font-bold text-[18px] shrink-0 shadow-sm">' + label + '</span>' +
+            '<span class="text-[18px] font-semibold leading-snug break-words">' + escapeHtml(optText) + '</span>' +
+            statusIcon +
+            '</button>'
+          );
+        })
+        .join('');
+
+      let feedbackHtml = '';
+      if (hasAnswered) {
+        const correctLetter = OPTION_LABELS[currentQ.correct];
+        const correctText = currentQ.options[currentQ.correct];
+        const boxClass = isRight
+          ? 'bg-emerald-50 border-emerald-400 text-emerald-950'
+          : 'bg-rose-50 border-rose-400 text-rose-950';
+        const headingHtml = isRight
+          ? '<div class="font-bold text-emerald-800 text-[19px]">🎉 Chính xác! Bạn đã chọn đúng đáp án.</div>'
+          : '<div class="font-bold text-rose-800 text-[19px]">❌ Rất tiếc, bạn chọn chưa đúng! Đáp án đúng là <span class="underline">' + correctLetter + '. ' + escapeHtml(correctText) + '</span></div>';
+        const explainTextHtml = currentQ.explanation
+          ? '<div class="mt-2 pt-2 border-t border-black/10 text-[18px]"><strong>💡 Giải thích:</strong> ' + escapeHtml(currentQ.explanation) + '</div>'
+          : '';
+
+        feedbackHtml = '<div class="mt-5 p-4 rounded-2xl border-2 ' + boxClass + ' animate-fade-up">' + headingHtml + explainTextHtml + '</div>';
+      }
+
+      const questionImageHtml = currentQ.image
+        ? '<div class="mb-6 flex flex-col items-center">' +
+            '<div class="p-2.5 rounded-2xl bg-gradient-to-br from-pink-50 via-purple-50 to-sky-50 border-2 border-purple-200 shadow-sm max-w-full">' +
+              '<img id="quiz-question-img" src="' + escapeHtml(currentQ.image) + '" alt="Hình ảnh minh họa cho câu hỏi" class="max-h-72 sm:max-h-80 max-w-full rounded-xl object-contain mx-auto cursor-zoom-in" title="Nhấn để phóng to hình ảnh" />' +
+            '</div>' +
+            '<span class="mt-1.5 text-[15px] text-purple-700 font-semibold">🔍 Nhấn vào hình để xem phóng to</span>' +
+          '</div>'
+        : '';
+
+      activeContent.innerHTML =
+        '<div class="flex flex-wrap items-center justify-between gap-2.5 mb-4">' +
+          '<div class="flex flex-wrap items-center gap-2">' +
+            '<span class="px-4 py-1 rounded-full bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white font-bold text-[18px] shadow-sm">Câu hỏi số ' + (state.currentIndex + 1) + '</span>' +
+            '<span class="px-3.5 py-1 rounded-full bg-sky-100 border border-sky-300 text-sky-900 font-bold text-[16px]">📖 ' + escapeHtml(normalizeLessonName(currentQ.lesson)) + '</span>' +
+          '</div>' +
+          statusBadgeHtml +
+        '</div>' +
+        '<h2 class="text-[21px] sm:text-[23px] font-bold text-purple-950 leading-relaxed mb-5 break-words whitespace-pre-line">' + escapeHtml(currentQ.question) + '</h2>' +
+        questionImageHtml +
+        '<div class="grid grid-cols-1 gap-3.5" id="quiz-options-container">' + optionsHtml + '</div>' +
+        feedbackHtml;
+
+      const quizImgEl = activeContent.querySelector('#quiz-question-img');
+      if (quizImgEl) {
+        quizImgEl.onerror = () => {
+          quizImgEl.onerror = null;
+          quizImgEl.src = IMAGE_FALLBACK_URL;
+        };
+        quizImgEl.addEventListener('click', () => openImageLightbox(currentQ.image));
+      }
+
+      activeContent.querySelectorAll('[data-option-index]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const chosenIdx = Number(btn.dataset.optionIndex);
+          handleSelectAnswer(currentQ.id, chosenIdx);
+        });
+      });
+
+      prevBtn.disabled = state.currentIndex <= 0;
+      nextBtn.disabled = state.currentIndex >= total - 1;
+
+      if (answeredCount === total && total > 0) {
+        const accuracy = Math.round((correctCount / total) * 100);
+        document.getElementById('summary-correct').textContent = String(correctCount);
+        document.getElementById('summary-wrong').textContent = String(wrongCount);
+        document.getElementById('summary-accuracy').textContent = accuracy + '%';
+
+        let emoji = '🎉';
+        let message = 'Bạn đã hoàn thành toàn bộ bài trắc nghiệm!';
+        if (accuracy === 100) {
+          emoji = '🏆';
+          message = 'Xuất sắc tuyệt đối! Bạn đã trả lời đúng tất cả các câu hỏi!';
+        } else if (accuracy >= 80) {
+          emoji = '🌟';
+          message = 'Rất tốt! Bạn nắm vững kiến thức và đạt kết quả ấn tượng.';
+        } else if (accuracy >= 50) {
+          emoji = '💪';
+          message = 'Khá tốt! Hãy ôn lại những câu làm sai để ghi nhớ sâu hơn nhé.';
+        } else {
+          emoji = '📚';
+          message = 'Cố gắng lên nhé! Bạn có thể bấm nút bên dưới để ôn lại ngay các câu chưa đúng.';
+        }
+
+        document.getElementById('summary-emoji').textContent = emoji;
+        document.getElementById('summary-message').textContent = message;
+
+        const reviewWrongBtn = document.getElementById('btn-review-wrong');
+        if (wrongCount > 0) {
+          reviewWrongBtn.classList.remove('hidden');
+          reviewWrongBtn.textContent = '🔥 Ôn lại ' + wrongCount + ' câu làm sai';
+        } else {
+          reviewWrongBtn.classList.add('hidden');
+        }
+
+        summaryCard.classList.remove('hidden');
+      } else {
+        summaryCard.classList.add('hidden');
+      }
+    }
+
+    // =========================================================================
+    // 8. QUẢN LÝ FORM & HIỂN THỊ DANH SÁCH NGÂN HÀNG CÂU HỎI
+    // =========================================================================
+    function updateCorrectPickerUI() {
+      document.querySelectorAll('.correct-pick-btn').forEach((btn) => {
+        const idx = Number(btn.dataset.answer);
+        if (idx === state.selectedCorrectInForm) {
+          btn.className = 'correct-pick-btn btn-vibrant p-3 rounded-2xl border-2 border-emerald-500 bg-emerald-100 text-emerald-900 font-bold text-[18px] flex items-center justify-center gap-2 shadow-md cursor-pointer ring-2 ring-emerald-300';
+        } else {
+          btn.className = 'correct-pick-btn btn-vibrant p-3 rounded-2xl border-2 border-purple-200 bg-white text-purple-900 hover:border-pink-400 font-bold text-[18px] flex items-center justify-center gap-2 cursor-pointer';
+        }
+      });
+    }
+
+    function resetSingleQuestionForm() {
+      const currentLessonValue = document.getElementById('input-question-lesson').value.trim();
+      document.getElementById('editing-question-id').value = '';
+      document.getElementById('input-question-text').value = '';
+      document.getElementById('input-opt-A').value = '';
+      document.getElementById('input-opt-B').value = '';
+      document.getElementById('input-opt-C').value = '';
+      document.getElementById('input-opt-D').value = '';
+      document.getElementById('input-explanation').value = '';
+      document.getElementById('input-image-url').value = '';
+      document.getElementById('input-image-file').value = '';
+      document.getElementById('input-question-lesson').value = currentLessonValue || (state.selectedBankLesson !== 'ALL' ? state.selectedBankLesson : getLessonList()[0]);
+      updateFormImagePreview('');
+      state.selectedCorrectInForm = 0;
+      updateCorrectPickerUI();
+
+      document.getElementById('form-heading').innerHTML = '<span>✍️</span><span>Thêm câu hỏi mới trực tiếp</span>';
+      document.getElementById('btn-submit-question').textContent = '✨ Thêm vào ngân hàng câu hỏi';
+      document.getElementById('btn-cancel-edit').classList.add('hidden');
+    }
+
+    function startEditQuestion(id) {
+      const q = getQuestionById(id);
+      if (!q) return;
+
+      switchBankSubtab('single');
+      document.getElementById('editing-question-id').value = q.id;
+      document.getElementById('input-question-lesson').value = normalizeLessonName(q.lesson);
+      document.getElementById('input-question-text').value = q.question;
+      document.getElementById('input-opt-A').value = q.options[0] || '';
+      document.getElementById('input-opt-B').value = q.options[1] || '';
+      document.getElementById('input-opt-C').value = q.options[2] || '';
+      document.getElementById('input-opt-D').value = q.options[3] || '';
+      document.getElementById('input-explanation').value = q.explanation || '';
+      const imgUrlInput = document.getElementById('input-image-url');
+      imgUrlInput.value = q.image && !q.image.startsWith('data:image/') ? q.image : '';
+      updateFormImagePreview(q.image || '');
+      state.selectedCorrectInForm = q.correct;
+      updateCorrectPickerUI();
+
+      document.getElementById('form-heading').innerHTML = '<span>✏️</span><span>Chỉnh sửa câu hỏi</span>';
+      document.getElementById('btn-submit-question').textContent = '💾 Lưu thay đổi câu hỏi';
+      document.getElementById('btn-cancel-edit').classList.remove('hidden');
+
+      document.getElementById('question-form-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function switchBankSubtab(subtab) {
+      const singleForm = document.getElementById('single-question-form');
+      const bulkPanel = document.getElementById('bulk-import-panel');
+      const singleBtn = document.getElementById('subtab-single-btn');
+      const bulkBtn = document.getElementById('subtab-bulk-btn');
+
+      if (subtab === 'single') {
+        singleForm.classList.remove('hidden');
+        bulkPanel.classList.add('hidden');
+        singleBtn.className = 'btn-vibrant px-4 py-2 rounded-xl bg-white text-purple-900 font-bold text-[17px] shadow-sm cursor-pointer';
+        bulkBtn.className = 'btn-vibrant px-4 py-2 rounded-xl text-purple-800 font-bold text-[17px] cursor-pointer';
+      } else {
+        singleForm.classList.add('hidden');
+        bulkPanel.classList.remove('hidden');
+        bulkBtn.className = 'btn-vibrant px-4 py-2 rounded-xl bg-white text-purple-900 font-bold text-[17px] shadow-sm cursor-pointer';
+        singleBtn.className = 'btn-vibrant px-4 py-2 rounded-xl text-purple-800 font-bold text-[17px] cursor-pointer';
+      }
+    }
+
+    function getFilteredBankQuestions() {
+      const keyword = state.searchQuery.trim().toLowerCase();
+      return state.questions.filter((q) => {
+        const qLesson = normalizeLessonName(q.lesson);
+        if (state.selectedBankLesson !== 'ALL' && qLesson !== state.selectedBankLesson) {
+          return false;
+        }
+        if (!keyword) return true;
+        return (
+          qLesson.toLowerCase().includes(keyword) ||
+          q.question.toLowerCase().includes(keyword) ||
+          q.options.some((o) => o.toLowerCase().includes(keyword)) ||
+          (q.explanation || '').toLowerCase().includes(keyword)
+        );
+      });
+    }
+
+    function renderBankList() {
+      const container = document.getElementById('bank-questions-list');
+      const totalBadge = document.getElementById('bank-list-total-badge');
+      const deleteAllBtn = document.getElementById('btn-delete-all-questions');
+      if (!container || !totalBadge) return;
+
+      const filtered = getFilteredBankQuestions();
+      totalBadge.textContent = filtered.length === state.questions.length
+        ? state.questions.length + ' câu'
+        : filtered.length + ' / ' + state.questions.length + ' câu';
+
+      if (deleteAllBtn) {
+        deleteAllBtn.textContent = state.selectedBankLesson === 'ALL'
+          ? '🗑 Xóa tất cả'
+          : '🗑 Xóa hết bài này';
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML =
+          '<div class="text-center py-10 px-4 rounded-2xl bg-purple-50/70 border-2 border-dashed border-purple-200">' +
+            '<div class="text-4xl mb-2">' + (state.questions.length === 0 ? '📭' : '🔎') + '</div>' +
+            '<p class="text-[18px] font-bold text-purple-900">' +
+              (state.questions.length === 0 ? 'Chưa có câu hỏi nào trong ngân hàng.' : 'Không có câu hỏi nào khớp với bài học hoặc từ khóa đang chọn.') +
+            '</p>' +
+            '<p class="text-[17px] text-slate-600 mt-1">' +
+              (state.questions.length === 0 ? 'Hãy nhập câu hỏi mới ở biểu mẫu phía trên hoặc bấm "Nạp câu mẫu".' : 'Hãy chọn "Tất cả các bài" hoặc thêm câu hỏi vào bài này nhé.') +
+            '</p>' +
+          '</div>';
+        return;
+      }
+
+      container.innerHTML = '';
+      filtered.forEach((q, displayIdx) => {
+        const card = document.createElement('article');
+        card.className = 'p-4 sm:p-5 rounded-2xl bg-white border-2 border-purple-100 hover:border-pink-300 shadow-sm transition-colors';
+
+        const optsHtml = q.options
+          .map((opt, idx) => {
+            const label = OPTION_LABELS[idx];
+            const isCorrect = idx === q.correct;
+            const styleClass = isCorrect
+              ? 'bg-emerald-50 border-emerald-400 text-emerald-950 font-bold'
+              : 'bg-slate-50 border-slate-200 text-slate-800';
+            return (
+              '<div class="p-2.5 rounded-xl border ' + styleClass + ' flex items-center gap-2.5 text-[18px]">' +
+                '<span class="badge-' + label + ' w-7 h-7 rounded-full inline-flex items-center justify-center font-bold text-[16px] shrink-0">' + label + '</span>' +
+                '<span class="break-words">' + escapeHtml(opt) + '</span>' +
+                (isCorrect ? '<span class="ml-auto text-emerald-700 font-bold shrink-0">✓ Đúng</span>' : '') +
+              '</div>'
+            );
+          })
+          .join('');
+
+        const explainHtml = q.explanation
+          ? '<div class="mt-3 p-3 rounded-xl bg-sky-50 border border-sky-200 text-sky-950 text-[17px]"><strong>💡 Giải thích:</strong> ' + escapeHtml(q.explanation) + '</div>'
+          : '';
+
+        const bankImageHtml = q.image
+          ? '<div class="mb-3">' +
+              '<img data-zoom-src="' + escapeHtml(q.image) + '" src="' + escapeHtml(q.image) + '" alt="Hình ảnh đính kèm câu ' + (displayIdx + 1) + '" class="max-h-44 max-w-full rounded-xl object-contain border-2 border-purple-200 bg-purple-50/40 p-1 cursor-zoom-in" title="Nhấn để phóng to hình ảnh" />' +
+            '</div>'
+          : '';
+
+        card.innerHTML =
+          '<div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">' +
+            '<div class="space-y-1.5">' +
+              '<div class="flex flex-wrap items-center gap-2">' +
+                '<span class="px-3 py-0.5 rounded-full bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-[16px]">Câu ' + (displayIdx + 1) + '</span>' +
+                '<span class="px-3 py-0.5 rounded-full bg-sky-100 border border-sky-300 text-sky-900 font-bold text-[16px]">📖 ' + escapeHtml(normalizeLessonName(q.lesson)) + '</span>' +
+              '</div>' +
+              '<h3 class="text-[19px] font-bold text-purple-950 leading-snug break-words whitespace-pre-line">' + escapeHtml(q.question) + '</h3>' +
+            '</div>' +
+            '<div class="flex items-center gap-2 shrink-0 self-end sm:self-start">' +
+              '<button type="button" data-edit-id="' + escapeHtml(q.id) + '" class="btn-vibrant px-3.5 py-1.5 rounded-xl bg-amber-100 border border-amber-400 text-amber-950 font-bold text-[17px] cursor-pointer">✏️ Sửa</button>' +
+              '<button type="button" data-delete-id="' + escapeHtml(q.id) + '" class="btn-vibrant px-3.5 py-1.5 rounded-xl bg-rose-100 border border-rose-400 text-rose-900 font-bold text-[17px] cursor-pointer">🗑 Xóa</button>' +
+            '</div>' +
+          '</div>' +
+          bankImageHtml +
+          '<div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">' + optsHtml + '</div>' +
+          explainHtml;
+
+        const thumbImg = card.querySelector('[data-zoom-src]');
+        if (thumbImg) {
+          thumbImg.onerror = () => {
+            thumbImg.onerror = null;
+            thumbImg.src = IMAGE_FALLBACK_URL;
+          };
+          thumbImg.addEventListener('click', () => openImageLightbox(q.image));
+        }
+
+        card.querySelector('[data-edit-id]').addEventListener('click', () => startEditQuestion(q.id));
+        card.querySelector('[data-delete-id]').addEventListener('click', () => {
+          showConfirmModal({
+            title: 'Xóa câu hỏi này?',
+            message: 'Bạn có chắc chắn muốn xóa Câu ' + (displayIdx + 1) + ': "' + q.question.slice(0, 80) + (q.question.length > 80 ? '...' : '') + '" khỏi ngân hàng câu hỏi?',
+            confirmText: 'Xóa câu hỏi',
+            icon: '🗑',
+            confirmColor: 'danger',
+            onConfirm: async () => {
+              await persistDeleteQuestion(q.id);
+              if (document.getElementById('editing-question-id').value === q.id) {
+                resetSingleQuestionForm();
+              }
+              showToast('Đã xóa câu hỏi khỏi ngân hàng!', 'info');
+            }
+          });
+        });
+
+        container.appendChild(card);
+      });
+    }
+
+    // =========================================================================
+    // 9. PHÂN TÍCH VĂN BẢN NHẬP NHANH NHIỀU CÂU & RENDER TỔNG
+    // =========================================================================
+    function parseBulkQuestionsText(rawText, defaultLessonForBulk) {
+      const normalized = String(rawText || '').replace(/\r\n/g, '\n').trim();
+      if (!normalized) return [];
+
+      const rawBlocks = normalized
+        .split(/\n\s*\n+/)
+        .flatMap((block) => block.split(/\n(?=(?:Câu|Cau)\s*\d+\s*[:.)])/i))
+        .map((b) => b.trim())
+        .filter(Boolean);
+
+      const results = [];
+      const baseTime = Date.now();
+      const fallbackLesson = normalizeLessonName(defaultLessonForBulk);
+
+      rawBlocks.forEach((block, blockIdx) => {
+        const lines = block.split('\n').map((l) => l.trim()).filter(Boolean);
+        const questionLines = [];
+        const optionsMap = { A: '', B: '', C: '', D: '' };
+        let correctIdx = 0;
+        let explanation = '';
+        let image = '';
+        let lesson = fallbackLesson;
+        let seenOption = false;
+
+        lines.forEach((line) => {
+          const optMatch = line.match(/^([A-D])\s*[.):-]\s*(.+)$/i);
+          const ansMatch = line.match(/^(?:Đáp\s*án|Dap\s*an|Answer|ĐA|DA)\s*[:.-]?\s*([A-D])\b/i);
+          const expMatch = line.match(/^(?:Giải\s*thích|Giai\s*thich|GT)\s*[:.-]?\s*(.+)$/i);
+          const lessonMatch = line.match(/^(?:Bài|Bai|Chủ\s*đề|Chu\s*de|Lesson)\s*[:.-]\s*(.+)$/i);
+          const imgMatch = line.match(/^(?:Hình\s*ảnh|Hinh\s*anh|Ảnh|Anh|Image|Img)\s*[:.-]?\s*(https?:\/\/\S+|data:image\/\S+)$/i);
+
+          if (ansMatch) {
+            const letter = ansMatch[1].toUpperCase();
+            correctIdx = OPTION_LABELS.indexOf(letter);
+            if (correctIdx < 0) correctIdx = 0;
+          } else if (expMatch) {
+            explanation = expMatch[1].trim();
+          } else if (lessonMatch) {
+            lesson = normalizeLessonName(lessonMatch[1]);
+          } else if (imgMatch) {
+            image = imgMatch[1].trim();
+          } else if (optMatch) {
+            seenOption = true;
+            const letter = optMatch[1].toUpperCase();
+            optionsMap[letter] = optMatch[2].trim();
+          } else if (!seenOption) {
+            questionLines.push(line.replace(/^(?:Câu|Cau)\s*\d+\s*[:.)]\s*/i, '').trim());
+          }
+        });
+
+        const questionText = questionLines.join('\n').trim();
+        const options = [optionsMap.A, optionsMap.B, optionsMap.C, optionsMap.D];
+        if (questionText && options.every((o) => o.length > 0)) {
+          results.push({
+            id: generateId(),
+            lesson,
+            question: questionText,
+            options,
+            correct: correctIdx,
+            explanation,
+            image,
+            createdAt: baseTime + blockIdx * 10
+          });
+        }
+      });
+
+      return results;
+    }
+
+    function renderAll() {
+      const quizPoolCount = getQuizPoolQuestions().length;
+      const quizCountEl = document.getElementById('tab-quiz-count');
+      const bankCountEl = document.getElementById('tab-bank-count');
+      if (quizCountEl) quizCountEl.textContent = String(quizPoolCount);
+      if (bankCountEl) bankCountEl.textContent = String(state.questions.length);
+
+      renderLessonControls();
+      renderQuizSection();
+      renderBankList();
+    }
+
+    // =========================================================================
+    // 10. XUẤT FILE HTML ĐÃ CẬP NHẬT CODE, TỰ GHI FILE, SAO CHÉP CODE & JSON
+    // =========================================================================
+    function buildUpdatedQuestionsJson() {
+      const cleanList = state.questions.map((q) => ({
+        id: q.id,
+        lesson: normalizeLessonName(q.lesson),
+        question: q.question,
+        options: q.options,
+        correct: q.correct,
+        explanation: q.explanation || '',
+        image: q.image || '',
+        createdAt: q.createdAt || Date.now()
+      }));
+      // Tránh chuỗi thẻ đóng script trong nội dung làm hỏng mã nguồn khi nhúng lại vào HTML
+      return JSON.stringify(cleanList, null, 2).replace(new RegExp('<' + '/script>', 'gi'), '<\\/' + 'script>');
+    }
+
+    function buildUpdatedHtmlContent(versionTimestamp) {
+      if (!INITIAL_CLEAN_HTML) return null;
+      const startIdx = INITIAL_CLEAN_HTML.indexOf(MARKER_START);
+      const endIdx = INITIAL_CLEAN_HTML.indexOf(MARKER_END);
+      if (startIdx === -1 || endIdx === -1 || endIdx <= startIdx) return null;
+
+      const safeJson = buildUpdatedQuestionsJson();
+      let resultHtml =
+        INITIAL_CLEAN_HTML.slice(0, startIdx + MARKER_START.length) +
+        '\n' +
+        safeJson +
+        '\n' +
+        INITIAL_CLEAN_HTML.slice(endIdx);
+
+      // Đóng dấu thời gian phiên bản mới vào code HTML để thiết bị khác tự nhận biết bản mới hơn
+      const vStartIdx = resultHtml.indexOf(VERSION_MARKER_START);
+      const vEndIdx = resultHtml.indexOf(VERSION_MARKER_END);
+      if (vStartIdx !== -1 && vEndIdx !== -1 && vEndIdx > vStartIdx) {
+        const stamp = typeof versionTimestamp === 'number' ? versionTimestamp : Date.now();
+        resultHtml =
+          resultHtml.slice(0, vStartIdx + VERSION_MARKER_START.length) +
+          '\n' +
+          String(stamp) +
+          '\n' +
+          resultHtml.slice(vEndIdx);
+      }
+      // Lưu kèm cấu hình Đồng bộ Google Drive vào thẳng file HTML xuất ra
+      const dStartIdx = resultHtml.indexOf(DRIVE_MARKER_START);
+      const dEndIdx = resultHtml.indexOf(DRIVE_MARKER_END);
+      if (dStartIdx !== -1 && dEndIdx !== -1 && dEndIdx > dStartIdx) {
+        const driveJson = JSON.stringify(
+          {
+            clientId: state.drive.clientId || '',
+            allowedEmail: state.drive.allowedEmail || '',
+            fileName: state.drive.fileName || 'trac_nghiem_sac_mau_database.json'
+          },
+          null,
+          2
+        );
+        resultHtml =
+          resultHtml.slice(0, dStartIdx + DRIVE_MARKER_START.length) +
+          '\n' +
+          driveJson +
+          '\n' +
+          resultHtml.slice(dEndIdx);
+      }
+
+      return resultHtml;
+    }
+
+    async function autoSaveToLinkedHtmlFile() {
+      if (!state.linkedFileHandle) return false;
+      try {
+        const versionStamp = Date.now();
+        const updatedHtml = buildUpdatedHtmlContent(versionStamp);
+        if (!updatedHtml) return false;
+
+        const writable = await state.linkedFileHandle.createWritable();
+        await writable.write(updatedHtml);
+        await writable.close();
+
+        setUnsavedLocalState(false);
+        saveQuestionsToLocalStorage({
+          updatedAt: versionStamp,
+          baseVersion: versionStamp,
+          unsavedToFile: false
+        });
+        setSyncStatus('saved', 'Đã tự lưu vào file (' + state.questions.length + ' câu)');
+        return true;
+      } catch (err) {
+        console.error('Lỗi tự ghi file HTML đã liên kết:', err);
+        state.linkedFileHandle = null;
+        setUnsavedLocalState(true);
+        saveQuestionsToLocalStorage({ unsavedToFile: true });
+        showToast('Không thể tự ghi vào file đã liên kết. Vui lòng chọn lại hoặc dùng nút Tải file HTML!', 'warning');
+        return false;
+      }
+    }
+
+    async function linkLocalHtmlFile() {
+      if (typeof window.showSaveFilePicker !== 'function') {
+        showToast('Trình duyệt hiện tại không hỗ trợ ghi trực tiếp. Đang tải xuống file HTML đã cập nhật thay thế...', 'info');
+        downloadUpdatedHtmlFile();
+        return;
+      }
+
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: 'trac-nghiem.html',
+          types: [
+            {
+              description: 'Trang web HTML',
+              accept: { 'text/html': ['.html'] }
+            }
+          ]
+        });
+        state.linkedFileHandle = handle;
+        const ok = await autoSaveToLinkedHtmlFile();
+        if (ok) {
+          const linkBtn = document.getElementById('btn-link-html-file');
+          if (linkBtn) {
+            linkBtn.textContent = '✅ Đang tự lưu vào: ' + handle.name;
+          }
+          showToast('Đã liên kết "' + handle.name + '"! Từ giờ mọi thao tác thêm/sửa/xóa sẽ tự động cập nhật vào code của file này.', 'success');
+        }
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;
+        console.warn('File System Access bị hạn chế trong môi trường này:', err);
+        showToast('Môi trường hiện tại không cho ghi đè trực tiếp. Đang tải xuống file HTML mới cho bạn!', 'info');
+        downloadUpdatedHtmlFile();
+      }
+    }
+
+    function downloadUpdatedHtmlFile() {
+      try {
+        const versionStamp = Date.now();
+        const updatedHtml = buildUpdatedHtmlContent(versionStamp);
+        if (!updatedHtml) {
+          showToast('Không thể tạo nội dung HTML cập nhật.', 'error');
+          return;
+        }
+
+        const blob = new Blob([updatedHtml], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'trac-nghiem-cap-nhat.html';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+
+        setUnsavedLocalState(false);
+        saveQuestionsToLocalStorage({
+          updatedAt: versionStamp,
+          baseVersion: versionStamp,
+          unsavedToFile: false
+        });
+        if (!state.cloudEnabled) {
+          setSyncStatus('saved', 'Đã xuất file mới (' + state.questions.length + ' câu)');
+        }
+
+        showToast(
+          'Đã tải "trac-nghiem-cap-nhat.html" (' + state.questions.length + ' câu). Gửi chính file này sang điện thoại sẽ tự hiển thị đủ các bài!',
+          'success'
+        );
+      } catch (err) {
+        console.error('Lỗi tải file HTML:', err);
+        showToast('Có lỗi xảy ra khi xuất file HTML.', 'error');
+      }
+    }
+
+    function copyQuestionsCodeSnippet() {
+      try {
+        const snippet = MARKER_START + '\n' + buildUpdatedQuestionsJson() + '\n' + MARKER_END;
+        const textarea = document.createElement('textarea');
+        textarea.value = snippet;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.top = '-9999px';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        textarea.setSelectionRange(0, textarea.value.length);
+
+        const ok = document.execCommand('copy');
+        document.body.removeChild(textarea);
+
+        if (ok) {
+          showToast('Đã sao chép đoạn code của ' + state.questions.length + ' câu hỏi vào bộ nhớ tạm!', 'success');
+        } else {
+          showToast('Không thể sao chép tự động. Vui lòng thử lại.', 'warning');
+        }
+      } catch (err) {
+        console.error('Lỗi sao chép code:', err);
+        showToast('Lỗi khi sao chép đoạn code.', 'error');
+      }
+    }
+
+    function exportQuestionsJson() {
+      try {
+        const jsonStr = JSON.stringify(state.questions, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'ngan-hang-cau-hoi.json';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+        showToast('Đã xuất file JSON (' + state.questions.length + ' câu hỏi)!', 'success');
+      } catch (err) {
+        console.error('Lỗi xuất JSON:', err);
+        showToast('Có lỗi khi xuất file JSON.', 'error');
+      }
+    }
+
+    function handleImportJsonFile(file, replaceAllMode) {
+      if (!file) return;
+      const defaultLessonForImport = state.selectedBankLesson !== 'ALL' ? state.selectedBankLesson : DEFAULT_LESSON;
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const parsed = JSON.parse(String(e.target.result || ''));
+          if (!Array.isArray(parsed)) {
+            showToast('File JSON không đúng định dạng mảng câu hỏi.', 'error');
+            return;
+          }
+
+          const validItems = parsed
+            .filter((item) => item && item.question && Array.isArray(item.options) && item.options.length === 4)
+            .map((item, idx) => ({
+              id: replaceAllMode && item.id ? String(item.id) : generateId(),
+              lesson: normalizeLessonName(item.lesson || defaultLessonForImport),
+              question: String(item.question).trim(),
+              options: item.options.map((o) => String(o || '').trim()),
+              correct: Number.isInteger(item.correct) && item.correct >= 0 && item.correct <= 3 ? item.correct : 0,
+              explanation: String(item.explanation || '').trim(),
+              image: String(item.image || '').trim(),
+              createdAt: typeof item.createdAt === 'number' ? item.createdAt : Date.now() + idx * 10
+            }));
+
+          if (validItems.length === 0) {
+            showToast('Không tìm thấy câu hỏi hợp lệ nào trong file JSON.', 'warning');
+            return;
+          }
+
+          if (replaceAllMode) {
+            const oldIds = state.questions.map((q) => q.id);
+            state.questions = validItems;
+            state.customLessons = [];
+            state.selectedQuizLesson = 'ALL';
+            state.selectedBankLesson = 'ALL';
+            state.userAnswers = {};
+            state.reviewWrongMode = false;
+            syncQuizOrderWithQuestions();
+            renderAll();
+
+            if (state.cloudEnabled && state.user && state.db && fb.writeBatch) {
+              const newIdSet = new Set(validItems.map((q) => q.id));
+              const idsToRemove = oldIds.filter((id) => !newIdSet.has(id));
+              if (idsToRemove.length > 0) await persistDeleteManyQuestions(idsToRemove);
+              await persistSaveManyQuestions(validItems);
+            } else {
+              await handleOfflinePersistenceAfterChange();
+            }
+            closeSyncModal();
+            showToast('Đã đồng bộ thay thế toàn bộ ' + validItems.length + ' câu hỏi (giống hệt file JSON)!', 'success');
+          } else {
+            await persistSaveManyQuestions(validItems);
+            showToast('Đã nhập thêm ' + validItems.length + ' câu hỏi từ file JSON!', 'success');
+          }
+        } catch (err) {
+          console.error('Lỗi đọc file JSON:', err);
+          showToast('File JSON bị lỗi cú pháp, không thể đọc được.', 'error');
+        }
+      };
+      reader.readAsText(file, 'utf-8');
+    }
+
+    // =========================================================================
+    // 11. CHUYỂN TAB & GẮN CÁC SỰ KIỆN GIAO DIỆN
+    // =========================================================================
+    function switchMainTab(tabName) {
+      state.activeTab = tabName;
+      const quizPanel = document.getElementById('panel-quiz');
+      const bankPanel = document.getElementById('panel-bank');
+      const quizBtn = document.getElementById('tab-btn-quiz');
+      const bankBtn = document.getElementById('tab-btn-bank');
+      const quizCount = document.getElementById('tab-quiz-count');
+      const bankCount = document.getElementById('tab-bank-count');
+
+      if (tabName === 'quiz') {
+        quizPanel.classList.remove('hidden');
+        bankPanel.classList.add('hidden');
+        quizBtn.className = 'btn-vibrant flex-1 sm:flex-none px-6 py-3 rounded-2xl font-bold text-[18px] flex items-center justify-center gap-2 bg-white text-purple-800 shadow-lg border-2 border-white cursor-pointer';
+        bankBtn.className = 'btn-vibrant flex-1 sm:flex-none px-6 py-3 rounded-2xl font-bold text-[18px] flex items-center justify-center gap-2 bg-white/20 text-white hover:bg-white/30 border-2 border-white/50 cursor-pointer';
+        quizCount.className = 'ml-1 px-2.5 py-0.5 rounded-full bg-pink-100 text-pink-700 text-[16px]';
+        bankCount.className = 'ml-1 px-2.5 py-0.5 rounded-full bg-white/25 text-white text-[16px]';
+        renderQuizSection();
+      } else {
+        quizPanel.classList.add('hidden');
+        bankPanel.classList.remove('hidden');
+        bankBtn.className = 'btn-vibrant flex-1 sm:flex-none px-6 py-3 rounded-2xl font-bold text-[18px] flex items-center justify-center gap-2 bg-white text-purple-800 shadow-lg border-2 border-white cursor-pointer';
+        quizBtn.className = 'btn-vibrant flex-1 sm:flex-none px-6 py-3 rounded-2xl font-bold text-[18px] flex items-center justify-center gap-2 bg-white/20 text-white hover:bg-white/30 border-2 border-white/50 cursor-pointer';
+        bankCount.className = 'ml-1 px-2.5 py-0.5 rounded-full bg-pink-100 text-pink-700 text-[16px]';
+        quizCount.className = 'ml-1 px-2.5 py-0.5 rounded-full bg-white/25 text-white text-[16px]';
+        renderLessonControls();
+        renderBankList();
+      }
+    }
+
+    async function restoreSampleQuestions() {
+      const existingTexts = new Set(state.questions.map((q) => q.question.trim().toLowerCase()));
+      const toAdd = cloneQuestions(DEFAULT_QUESTIONS)
+        .filter((q) => !existingTexts.has(q.question.trim().toLowerCase()))
+        .map((q, idx) => ({
+          ...q,
+          id: state.questions.some((ex) => ex.id === q.id) ? generateId() : q.id,
+          createdAt: Date.now() + idx * 10
+        }));
+
+      if (toAdd.length === 0) {
+        showToast('Tất cả các câu hỏi mẫu đã có sẵn trong ngân hàng của bạn!', 'info');
+        return;
+      }
+
+      await persistSaveManyQuestions(toAdd);
+      showToast('Đã nạp thêm ' + toAdd.length + ' câu hỏi mẫu vào ngân hàng!', 'success');
+    }
+
+    function bindEvents() {
+      // Chuyển đổi giữa 2 tab chính
+      document.getElementById('tab-btn-quiz').addEventListener('click', () => switchMainTab('quiz'));
+      document.getElementById('tab-btn-bank').addEventListener('click', () => switchMainTab('bank'));
+
+      // Chọn bài học ở Tab Làm bài & Tab Ngân hàng
+      document.getElementById('quiz-lesson-select').addEventListener('change', (e) => {
+        selectQuizLesson(e.target.value);
+      });
+      document.getElementById('bank-lesson-filter').addEventListener('change', (e) => {
+        state.selectedBankLesson = e.target.value;
+        if (state.selectedBankLesson !== 'ALL') {
+          if (!document.getElementById('editing-question-id').value) {
+            document.getElementById('input-question-lesson').value = state.selectedBankLesson;
+          }
+          document.getElementById('input-bulk-lesson').value = state.selectedBankLesson;
+        }
+        renderLessonControls();
+        renderBankList();
+      });
+
+      // Tạo bài học mới nhanh
+      async function handleAddLesson() {
+        const input = document.getElementById('input-new-lesson-name');
+        const name = input.value.trim();
+        if (!name) {
+          showToast('Vui lòng nhập tên bài học mới!', 'warning');
+          return;
+        }
+        const existing = getLessonList();
+        if (!existing.includes(name)) {
+          state.customLessons.push(name);
+          await handleOfflinePersistenceAfterChange();
+        }
+        state.selectedBankLesson = name;
+        document.getElementById('input-question-lesson').value = name;
+        document.getElementById('input-bulk-lesson').value = name;
+        input.value = '';
+        renderLessonControls();
+        renderBankList();
+        showToast('Đã tạo và chọn bài "' + name + '"!', 'success');
+      }
+
+      document.getElementById('btn-add-lesson').addEventListener('click', handleAddLesson);
+      document.getElementById('input-new-lesson-name').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleAddLesson();
+        }
+      });
+
+      // Nút đồng bộ Google Drive, tải file HTML cập nhật code, liên kết file & nạp lại từ code gốc
+      document.getElementById('header-gdrive-auth-btn').addEventListener('click', handleDriveAuthClick);
+      document.getElementById('header-gdrive-sync-btn').addEventListener('click', async () => {
+        if (state.drive.hasUnsyncedChanges) {
+          await saveToDrive({ urgent: false, silent: false });
+        } else {
+          await loadDataFromDrive({ silent: false, force: true });
+        }
+      });
+      document.getElementById('header-cloud-sync-btn').addEventListener('click', openSyncModal);
+      document.getElementById('bank-cloud-sync-btn').addEventListener('click', openSyncModal);
+      document.getElementById('sync-modal-close-btn').addEventListener('click', closeSyncModal);
+      document.getElementById('sync-modal-overlay').addEventListener('click', (e) => {
+        if (e.target.id === 'sync-modal-overlay') closeSyncModal();
+      });
+
+      document.getElementById('btn-drive-save-settings').addEventListener('click', () => {
+        const clientId = document.getElementById('input-drive-client-id').value.trim();
+        const allowedEmail = document.getElementById('input-drive-email').value.trim();
+        if (!clientId) {
+          showToast('Vui lòng nhập Google OAuth Client ID!', 'warning');
+          return;
+        }
+        state.drive.clientId = clientId;
+        state.drive.allowedEmail = allowedEmail;
+        saveDriveConfigToStorage();
+        initDriveTokenClient();
+        updateDriveModalUI();
+        showToast('Đã lưu cấu hình Google Drive!', 'success');
+      });
+
+      document.getElementById('btn-drive-modal-login').addEventListener('click', () => {
+        const clientId = document.getElementById('input-drive-client-id').value.trim();
+        const allowedEmail = document.getElementById('input-drive-email').value.trim();
+        if (clientId) {
+          state.drive.clientId = clientId;
+          state.drive.allowedEmail = allowedEmail;
+          saveDriveConfigToStorage();
+          initDriveTokenClient();
+        }
+        handleDriveAuthClick();
+      });
+
+      document.getElementById('btn-drive-modal-pull').addEventListener('click', async () => {
+        if (!state.drive.connected) {
+          showToast('Vui lòng bấm "Đăng nhập Google Drive" trước!', 'warning');
+          return;
+        }
+        await loadDataFromDrive({ silent: false, force: true });
+      });
+
+      document.getElementById('btn-drive-modal-push').addEventListener('click', async () => {
+        if (!state.drive.connected) {
+          showToast('Vui lòng bấm "Đăng nhập Google Drive" trước!', 'warning');
+          return;
+        }
+        await saveToDrive({ urgent: false, silent: false });
+      });
+
+      document.getElementById('btn-drive-modal-logout').addEventListener('click', handleDriveSignOut);
+
+      document.getElementById('btn-sync-export-json').addEventListener('click', exportQuestionsJson);
+      document.getElementById('btn-sync-import-replace-json').addEventListener('click', () => {
+        document.getElementById('input-import-replace-json').click();
+      });
+      document.getElementById('input-import-replace-json').addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) handleImportJsonFile(file, true);
+        e.target.value = '';
+      });
+
+      // Tự động đẩy khi ẩn tab (nếu có thay đổi chưa lưu) & tự động kéo dữ liệu mới nhất khi mở lại tab trên Laptop/Điện thoại
+      document.addEventListener('visibilitychange', () => {
+        if (!state.drive.connected) return;
+        if (document.visibilityState === 'hidden') {
+          if (state.drive.hasUnsyncedChanges || state.drive.autoSyncTimer) {
+            if (state.drive.autoSyncTimer) {
+              clearTimeout(state.drive.autoSyncTimer);
+              state.drive.autoSyncTimer = null;
+            }
+            saveToDrive({ urgent: true, silent: true });
+          }
+        } else if (document.visibilityState === 'visible') {
+          loadDataFromDrive({ silent: true, force: false });
+        }
+      });
+
+      document.getElementById('header-download-html-btn').addEventListener('click', downloadUpdatedHtmlFile);
+      document.getElementById('bank-download-html-btn').addEventListener('click', downloadUpdatedHtmlFile);
+      document.getElementById('btn-link-html-file').addEventListener('click', linkLocalHtmlFile);
+      document.getElementById('banner-link-file-btn').addEventListener('click', linkLocalHtmlFile);
+      document.getElementById('banner-download-html-btn').addEventListener('click', downloadUpdatedHtmlFile);
+      document.getElementById('btn-reload-from-file').addEventListener('click', reloadFromEmbeddedHtmlCode);
+
+      // Nút xóa toàn bộ câu hỏi (hoặc toàn bộ câu hỏi của bài đang lọc)
+      document.getElementById('btn-delete-all-questions').addEventListener('click', () => {
+        const targetQuestions = state.selectedBankLesson === 'ALL'
+          ? state.questions
+          : state.questions.filter((q) => normalizeLessonName(q.lesson) === state.selectedBankLesson);
+
+        if (targetQuestions.length === 0) {
+          showToast('Không có câu hỏi nào để xóa trong mục này!', 'info');
+          return;
+        }
+
+        const scopeLabel = state.selectedBankLesson === 'ALL'
+          ? 'toàn bộ ' + targetQuestions.length + ' câu hỏi trong ngân hàng'
+          : targetQuestions.length + ' câu hỏi thuộc "' + state.selectedBankLesson + '"';
+
+        showConfirmModal({
+          title: 'Xóa danh sách câu hỏi?',
+          message: 'Bạn có chắc chắn muốn xóa ' + scopeLabel + '? Thao tác này không thể hoàn tác.',
+          confirmText: 'Xóa ngay',
+          icon: '🗑',
+          confirmColor: 'danger',
+          onConfirm: async () => {
+            const ids = targetQuestions.map((q) => q.id);
+            await persistDeleteManyQuestions(ids);
+            resetSingleQuestionForm();
+            showToast('Đã xóa ' + ids.length + ' câu hỏi!', 'info');
+          }
+        });
+      });
+
+      // Cảnh báo hoặc đẩy gấp lên Google Drive khi người dùng chuẩn bị đóng trang
+      window.addEventListener('beforeunload', (e) => {
+        if (state.drive.connected && (state.drive.hasUnsyncedChanges || state.drive.autoSyncTimer || state.drive.isSyncing)) {
+          if (state.drive.autoSyncTimer) {
+            clearTimeout(state.drive.autoSyncTimer);
+            state.drive.autoSyncTimer = null;
+          }
+          saveToDrive({ urgent: true, silent: true });
+          const payloadSize = new Blob([JSON.stringify({ questions: state.questions })]).size;
+          if (payloadSize >= 60000) {
+            e.preventDefault();
+            e.returnValue = '';
+          }
+          return;
+        }
+        if (state.hasUnsavedLocalChanges && !state.cloudEnabled && !state.drive.connected) {
+          e.preventDefault();
+          e.returnValue = '';
+        }
+      });
+
+      // Sao chép code & Xuất / Nhập JSON
+      document.getElementById('btn-copy-code-snippet').addEventListener('click', copyQuestionsCodeSnippet);
+      document.getElementById('btn-export-json').addEventListener('click', exportQuestionsJson);
+      document.getElementById('btn-import-json').addEventListener('click', () => {
+        document.getElementById('input-import-json').click();
+      });
+      document.getElementById('input-import-json').addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) handleImportJsonFile(file, false);
+        e.target.value = '';
+      });
+
+      // Điều hướng & điều khiển bài trắc nghiệm
+      document.getElementById('btn-prev-question').addEventListener('click', () => goToQuestion(state.currentIndex - 1));
+      document.getElementById('btn-next-question').addEventListener('click', () => goToQuestion(state.currentIndex + 1));
+      document.getElementById('btn-shuffle-quiz').addEventListener('click', () => restartQuiz(true));
+      document.getElementById('btn-restart-quiz').addEventListener('click', () => restartQuiz(false));
+      document.getElementById('btn-summary-restart').addEventListener('click', () => restartQuiz(false));
+      document.getElementById('btn-summary-shuffle').addEventListener('click', () => restartQuiz(true));
+      document.getElementById('btn-review-wrong').addEventListener('click', startReviewWrongMode);
+      document.getElementById('btn-exit-review-mode').addEventListener('click', exitReviewWrongMode);
+
+      // Nút trạng thái trống
+      document.getElementById('btn-go-to-bank-empty').addEventListener('click', () => switchMainTab('bank'));
+      document.getElementById('btn-restore-sample-empty').addEventListener('click', restoreSampleQuestions);
+      document.getElementById('btn-restore-samples').addEventListener('click', restoreSampleQuestions);
+
+      // Subtab Ngân hàng câu hỏi
+      document.getElementById('subtab-single-btn').addEventListener('click', () => switchBankSubtab('single'));
+      document.getElementById('subtab-bulk-btn').addEventListener('click', () => switchBankSubtab('bulk'));
+
+      // Xử lý chọn ảnh từ máy, nhập link ảnh, xóa ảnh & dán ảnh (Ctrl + V)
+      const imageFileInput = document.getElementById('input-image-file');
+      const imageUrlInput = document.getElementById('input-image-url');
+
+      async function handleImageFileChosen(file) {
+        if (!file) return;
+        try {
+          const result = await compressImageFileToDataUrl(file);
+          imageUrlInput.value = '';
+          updateFormImagePreview(result.dataUrl, '✓ Đã đính kèm ảnh (' + result.width + '×' + result.height + 'px • ~' + result.sizeKb + ' KB)');
+          showToast('Đã đính kèm hình ảnh gọn nhẹ (~' + result.sizeKb + ' KB)!', 'success');
+        } catch (err) {
+          console.error('Lỗi xử lý hình ảnh:', err);
+          showToast('Không thể đọc hình ảnh này. Vui lòng chọn tệp ảnh hợp lệ (JPG, PNG, WebP...).', 'error');
+        }
+      }
+
+      document.getElementById('btn-upload-image').addEventListener('click', () => {
+        imageFileInput.click();
+      });
+
+      imageFileInput.addEventListener('change', async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) await handleImageFileChosen(file);
+        e.target.value = '';
+      });
+
+      imageUrlInput.addEventListener('input', (e) => {
+        const urlVal = e.target.value.trim();
+        if (urlVal) {
+          updateFormImagePreview(urlVal, '✓ Đang dùng hình ảnh từ đường dẫn URL');
+        } else if (!state.currentFormImage.startsWith('data:image/')) {
+          updateFormImagePreview('');
+        }
+      });
+
+      document.getElementById('btn-remove-image').addEventListener('click', () => {
+        imageUrlInput.value = '';
+        imageFileInput.value = '';
+        updateFormImagePreview('');
+        showToast('Đã gỡ hình ảnh khỏi câu hỏi.', 'info');
+      });
+
+      document.getElementById('image-preview-img').addEventListener('click', () => {
+        if (state.currentFormImage) openImageLightbox(state.currentFormImage);
+      });
+
+      // Hỗ trợ dán trực tiếp hình ảnh (Ctrl + V) khi đang nhập câu hỏi
+      document.addEventListener('paste', async (e) => {
+        if (state.activeTab !== 'bank') return;
+        const singleForm = document.getElementById('single-question-form');
+        if (!singleForm || singleForm.classList.contains('hidden')) return;
+
+        const items = e.clipboardData && e.clipboardData.items;
+        if (!items) return;
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          if (item.type && item.type.startsWith('image/')) {
+            e.preventDefault();
+            const file = item.getAsFile();
+            if (file) await handleImageFileChosen(file);
+            break;
+          }
+        }
+      });
+
+      // Đóng hộp phóng to hình ảnh (Lightbox)
+      document.getElementById('lightbox-close-btn').addEventListener('click', closeImageLightbox);
+      document.getElementById('image-lightbox-overlay').addEventListener('click', (e) => {
+        if (e.target.id === 'image-lightbox-overlay') closeImageLightbox();
+      });
+
+      // Chọn đáp án đúng trong form
+      document.querySelectorAll('.correct-pick-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.selectedCorrectInForm = Number(btn.dataset.answer);
+          updateCorrectPickerUI();
+        });
+      });
+
+      // Lưu câu hỏi đơn lẻ (Thêm / Sửa)
+      document.getElementById('single-question-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const editingId = document.getElementById('editing-question-id').value.trim();
+        const lesson = normalizeLessonName(document.getElementById('input-question-lesson').value);
+        const questionText = document.getElementById('input-question-text').value.trim();
+        const optA = document.getElementById('input-opt-A').value.trim();
+        const optB = document.getElementById('input-opt-B').value.trim();
+        const optC = document.getElementById('input-opt-C').value.trim();
+        const optD = document.getElementById('input-opt-D').value.trim();
+        const explanation = document.getElementById('input-explanation').value.trim();
+        const image = state.currentFormImage || document.getElementById('input-image-url').value.trim();
+
+        if (!questionText || !optA || !optB || !optC || !optD) {
+          showToast('Vui lòng nhập đầy đủ nội dung câu hỏi và cả 4 đáp án A, B, C, D!', 'warning');
+          return;
+        }
+
+        const existing = editingId ? getQuestionById(editingId) : null;
+        const qObj = {
+          id: editingId || generateId(),
+          lesson,
+          question: questionText,
+          options: [optA, optB, optC, optD],
+          correct: state.selectedCorrectInForm,
+          explanation,
+          image,
+          createdAt: existing ? existing.createdAt : Date.now()
+        };
+
+        await persistSaveQuestion(qObj);
+        resetSingleQuestionForm();
+        showToast(
+          editingId ? 'Đã cập nhật câu hỏi thành công!' : 'Đã thêm câu hỏi mới vào "' + lesson + '"!',
+          'success'
+        );
+      });
+
+      document.getElementById('btn-cancel-edit').addEventListener('click', resetSingleQuestionForm);
+
+      // Nhập nhanh nhiều câu hỏi
+      document.getElementById('btn-fill-bulk-sample').addEventListener('click', () => {
+        document.getElementById('input-bulk-text').value = [
+          'Câu 1: Nước tinh khiết sôi ở nhiệt độ bao nhiêu độ C (ở áp suất khí quyển tiêu chuẩn 1 atm)?',
+          'A. 80°C',
+          'B. 90°C',
+          'C. 100°C',
+          'D. 120°C',
+          'Đáp án: C',
+          'Giải thích: Ở áp suất tiêu chuẩn 1 atm, nước tinh khiết sôi ở đúng 100°C và đóng băng ở 0°C.',
+          '',
+          'Câu 2: Kim loại nào dẫn điện tốt nhất trong điều kiện thường?',
+          'A. Đồng',
+          'B. Bạc',
+          'C. Vàng',
+          'D. Nhôm',
+          'Đáp án: B',
+          'Giải thích: Bạc (Ag) là kim loại có độ dẫn điện cao nhất, tiếp theo là Đồng (Cu) và Vàng (Au).'
+        ].join('\n');
+      });
+
+      document.getElementById('btn-clear-bulk').addEventListener('click', () => {
+        document.getElementById('input-bulk-text').value = '';
+      });
+
+      document.getElementById('btn-process-bulk').addEventListener('click', async () => {
+        const raw = document.getElementById('input-bulk-text').value;
+        const targetLesson = normalizeLessonName(document.getElementById('input-bulk-lesson').value);
+        const parsed = parseBulkQuestionsText(raw, targetLesson);
+        if (parsed.length === 0) {
+          showToast('Không nhận diện được câu hỏi hợp lệ. Hãy kiểm tra lại định dạng A., B., C., D. và Đáp án:!', 'warning');
+          return;
+        }
+
+        await persistSaveManyQuestions(parsed);
+        document.getElementById('input-bulk-text').value = '';
+        showToast('Đã thêm thành công ' + parsed.length + ' câu hỏi vào "' + targetLesson + '"!', 'success');
+      });
+
+      // Tìm kiếm trong ngân hàng câu hỏi
+      document.getElementById('input-search-bank').addEventListener('input', (e) => {
+        state.searchQuery = e.target.value;
+        renderBankList();
+      });
+
+      // Modal xác nhận
+      document.getElementById('modal-cancel-btn').addEventListener('click', closeConfirmModal);
+      document.getElementById('modal-confirm-btn').addEventListener('click', async () => {
+        const cb = state.modalConfirmCallback;
+        const inputVal = document.getElementById('modal-input').value;
+        closeConfirmModal();
+        if (typeof cb === 'function') {
+          await cb(inputVal);
+        }
+      });
+      document.getElementById('custom-modal-overlay').addEventListener('click', (e) => {
+        if (e.target.id === 'custom-modal-overlay') closeConfirmModal();
+      });
+
+      // Phím tắt tiện lợi khi làm bài trắc nghiệm
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !document.getElementById('image-lightbox-overlay').classList.contains('hidden')) {
+          closeImageLightbox();
+          return;
+        }
+        if (e.key === 'Escape' && !document.getElementById('sync-modal-overlay').classList.contains('hidden')) {
+          closeSyncModal();
+          return;
+        }
+        if (state.activeTab !== 'quiz') return;
+        const tag = (e.target && e.target.tagName || '').toLowerCase();
+        if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+        if (!document.getElementById('custom-modal-overlay').classList.contains('hidden')) return;
+        if (!document.getElementById('image-lightbox-overlay').classList.contains('hidden')) return;
+        if (!document.getElementById('sync-modal-overlay').classList.contains('hidden')) return;
+
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          goToQuestion(state.currentIndex - 1);
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          goToQuestion(state.currentIndex + 1);
+        } else {
+          const upper = e.key.toUpperCase();
+          const mapIdx = { A: 0, B: 1, C: 2, D: 3, '1': 0, '2': 1, '3': 2, '4': 3 };
+          if (Object.prototype.hasOwnProperty.call(mapIdx, upper) && state.quizOrder.length > 0) {
+            const currentId = state.quizOrder[state.currentIndex];
+            handleSelectAnswer(currentId, mapIdx[upper]);
+          }
+        }
+      });
+
+      // Hỗ trợ vuốt trái/phải trên màn hình cảm ứng để chuyển câu hỏi
+      const quizCard = document.getElementById('quiz-question-card');
+      let touchStartX = 0;
+      let touchStartY = 0;
+      quizCard.addEventListener('touchstart', (e) => {
+        if (e.changedTouches.length === 1) {
+          touchStartX = e.changedTouches[0].clientX;
+          touchStartY = e.changedTouches[0].clientY;
+        }
+      }, { passive: true });
+
+      quizCard.addEventListener('touchend', (e) => {
+        if (e.changedTouches.length === 1) {
+          const dx = e.changedTouches[0].clientX - touchStartX;
+          const dy = e.changedTouches[0].clientY - touchStartY;
+          if (Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+            if (dx < 0) goToQuestion(state.currentIndex + 1);
+            else goToQuestion(state.currentIndex - 1);
+          }
+        }
+      }, { passive: true });
+    }
+
+    // =========================================================================
+    // 12. KHỞI CHẠY ỨNG DỤNG
+    // =========================================================================
+    function bootstrapApp() {
+      loadDriveConfig();
+      loadQuestionsFromLocalStorage();
+      syncQuizOrderWithQuestions();
+      updateCorrectPickerUI();
+      bindEvents();
+      renderAll();
+      initCloudStorage();
+      initGoogleDriveSync();
+    }
+
+    bootstrapApp();
+  })();
+  </script>
+</body>
+</html>
