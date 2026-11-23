@@ -1414,6 +1414,7 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
         allowedEmail: EMBEDDED_DRIVE_CONFIG.allowedEmail,
         fileName: EMBEDDED_DRIVE_CONFIG.fileName || 'trac_nghiem_sac_mau_database.json',
         tokenClient: null,
+        accessToken: '',
         gapiInited: false,
         gisInited: false,
         connected: false,
@@ -1423,7 +1424,8 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
         tokenRefreshTimer: null,
         isSyncing: false,
         pendingSyncAfterCurrent: false,
-        hasUnsyncedChanges: false
+        hasUnsyncedChanges: false,
+        needsConsent: false
       }
     };
 
@@ -1531,7 +1533,7 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
     }
 
     // =========================================================================
-    // 3B. ĐỒNG BỘ 2 CHIỀU TỰ ĐỘNG QUA GOOGLE DRIVE (GIỐNG APP PHÒNG KHÁM)
+    // 3B. ĐỒNG BỘ 2 CHIỀU TỰ ĐỘNG QUA GOOGLE DRIVE (REST API V3 CHUẨN 2 BƯỚC)
     // =========================================================================
     function safeLsGet(key) {
       try { return window.localStorage.getItem(key); } catch (e) { return null; }
@@ -1543,6 +1545,21 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
 
     function safeLsRemove(key) {
       try { window.localStorage.removeItem(key); } catch (e) {}
+    }
+
+    async function parseDriveError(res) {
+      let detail = '';
+      try {
+        const errJson = await res.json();
+        if (errJson && errJson.error) {
+          detail = errJson.error.message || (errJson.error.errors && errJson.error.errors[0] && errJson.error.errors[0].reason) || '';
+        }
+      } catch (e) {
+        try {
+          detail = (await res.text()).slice(0, 140);
+        } catch (e2) {}
+      }
+      return { status: res.status, detail: detail };
     }
 
     function loadDriveConfig() {
@@ -1614,7 +1631,7 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
         headerSyncBtn.classList.toggle('hidden', !state.drive.connected);
       }
       if (modalLoginBtn) {
-        modalLoginBtn.textContent = state.drive.connected ? '🔄 Đổi tài khoản Google' : '🔐 Đăng nhập Google Drive';
+        modalLoginBtn.textContent = state.drive.connected ? '🔄 Đăng nhập lại / Cấp quyền' : '🔐 Đăng nhập Google Drive';
       }
       if (modalLogoutBtn) {
         modalLogoutBtn.classList.toggle('hidden', !state.drive.connected);
@@ -1636,6 +1653,70 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
       }, refreshDelayMs);
     }
 
+    // Lấy Access Token hiện tại an toàn (ưu tiên từ gapi, dự phòng từ state & localStorage)
+    function getDriveAccessToken() {
+      const gapiToken = window.gapi && window.gapi.client && window.gapi.client.getToken
+        ? window.gapi.client.getToken()
+        : null;
+      if (gapiToken && gapiToken.access_token) {
+        state.drive.accessToken = gapiToken.access_token;
+        return gapiToken.access_token;
+      }
+      if (state.drive.accessToken) {
+        if (window.gapi && window.gapi.client) {
+          window.gapi.client.setToken({ access_token: state.drive.accessToken });
+        }
+        return state.drive.accessToken;
+      }
+      const savedToken = safeLsGet(DRIVE_TOKEN_KEY);
+      const expiresAt = parseInt(safeLsGet(DRIVE_EXPIRES_KEY) || '0', 10);
+      if (savedToken && Date.now() < expiresAt) {
+        state.drive.accessToken = savedToken;
+        if (window.gapi && window.gapi.client) {
+          window.gapi.client.setToken({ access_token: savedToken });
+        }
+        return savedToken;
+      }
+      return '';
+    }
+
+    // Đợi Google API Client khởi tạo xong nếu người dùng bấm đăng nhập sớm
+    function waitForGapiClientReady(timeoutMs) {
+      const maxWait = timeoutMs || 6000;
+      if (state.drive.gapiInited && window.gapi && window.gapi.client && window.gapi.client.drive) {
+        return Promise.resolve(true);
+      }
+      return new Promise((resolve) => {
+        const started = Date.now();
+        const timer = setInterval(() => {
+          if (state.drive.gapiInited && window.gapi && window.gapi.client && window.gapi.client.drive) {
+            clearInterval(timer);
+            resolve(true);
+          } else if (Date.now() - started >= maxWait) {
+            clearInterval(timer);
+            resolve(false);
+          }
+        }, 120);
+      });
+    }
+
+    // Đọc thông báo lỗi chi tiết từ phản hồi HTTP của Google Drive API
+    async function extractDriveErrorMessage(res) {
+      try {
+        const text = await res.text();
+        if (!text) return 'HTTP ' + res.status;
+        try {
+          const parsed = JSON.parse(text);
+          if (parsed && parsed.error && parsed.error.message) {
+            return 'HTTP ' + res.status + ' — ' + parsed.error.message;
+          }
+        } catch (e) {}
+        return 'HTTP ' + res.status + ' — ' + text.slice(0, 140);
+      } catch (e) {
+        return 'HTTP ' + res.status;
+      }
+    }
+
     function initDriveTokenClient() {
       if (!window.google || !window.google.accounts || !window.google.accounts.oauth2 || !state.drive.clientId) {
         return false;
@@ -1649,9 +1730,22 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
             setSyncStatus('error', 'Lỗi xác thực Google Drive — Vui lòng đăng nhập lại');
             state.drive.connected = false;
             updateDriveModalUI();
-            showToast('Đăng nhập Google Drive chưa thành công. Vui lòng thử lại!', 'error');
+            showToast('Đăng nhập Google Drive chưa thành công (' + resp.error + '). Vui lòng thử lại!', 'error');
             return;
           }
+
+          // Kiểm tra xem người dùng đã tích chọn quyền truy cập Google Drive hay chưa
+          if (resp.scope && resp.scope.indexOf('drive.file') === -1) {
+            state.drive.needsConsent = true;
+            state.drive.connected = false;
+            updateDriveModalUI();
+            setSyncStatus('error', 'Thiếu quyền Google Drive — Hãy đăng nhập lại & tích chọn quyền Drive');
+            showToast('Bạn chưa tích chọn ô cấp quyền Google Drive! Hãy bấm Đăng nhập lại và tích chọn quyền truy cập Google Drive.', 'warning');
+            return;
+          }
+
+          state.drive.needsConsent = false;
+          state.drive.accessToken = resp.access_token;
           const expiresIn = parseInt(resp.expires_in, 10) || 3599;
           const expiresAt = Date.now() + (expiresIn - 120) * 1000;
           safeLsSet(DRIVE_TOKEN_KEY, resp.access_token);
@@ -1661,6 +1755,12 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
           }
           scheduleDriveTokenAutoRefresh(expiresIn);
           await verifyAndLoadDriveUser(false);
+        },
+        error_callback: (err) => {
+          console.warn('Cửa sổ đăng nhập Google đóng hoặc bị chặn:', err);
+          if (err && err.type === 'popup_failed_to_open') {
+            showToast('Trình duyệt đang chặn cửa sổ bật lên (popup). Hãy cho phép popup rồi bấm Đăng nhập lại!', 'warning');
+          }
         }
       });
       state.drive.gisInited = true;
@@ -1674,6 +1774,7 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
       const expiresAt = parseInt(safeLsGet(DRIVE_EXPIRES_KEY) || '0', 10);
 
       if (savedToken && Date.now() < expiresAt) {
+        state.drive.accessToken = savedToken;
         window.gapi.client.setToken({ access_token: savedToken });
         const remainingSec = Math.floor((expiresAt - Date.now()) / 1000);
         scheduleDriveTokenAutoRefresh(remainingSec);
@@ -1685,35 +1786,17 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
     }
 
     function initGoogleDriveSync() {
-      let gapiPollCount = 0;
-      const pollGapi = setInterval(() => {
-        gapiPollCount++;
-        if (window.gapi && typeof window.gapi.load === 'function') {
-          clearInterval(pollGapi);
-          window.gapi.load('client', async () => {
-            try {
-              await window.gapi.client.init({ discoveryDocs: [DRIVE_DISCOVERY_DOC] });
-              state.drive.gapiInited = true;
-              await checkDriveAuthInit();
-            } catch (err) {
-              console.warn('Không khởi tạo được Google API Client:', err);
-            }
-          });
-        } else if (gapiPollCount > 80) {
-          clearInterval(pollGapi);
-        }
-      }, 150);
+      // Khôi phục phiên đăng nhập ngay bằng token đã lưu (không cần chờ gapi.client.init)
+      checkDriveAuthInit();
 
       let gisPollCount = 0;
       const pollGis = setInterval(() => {
         gisPollCount++;
         if (window.google && window.google.accounts && window.google.accounts.oauth2) {
           clearInterval(pollGis);
-          if (initDriveTokenClient()) {
-            checkDriveAuthInit();
-          }
+          initDriveTokenClient();
         } else if (gisPollCount > 80) {
-          clearInterval(gisPollCount);
+          clearInterval(pollGis);
         }
       }, 150);
     }
@@ -1740,7 +1823,7 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
       }
 
       state.drive.tokenClient.requestAccessToken({
-        prompt: 'select_account',
+        prompt: state.drive.needsConsent ? 'consent select_account' : 'select_account',
         login_hint: state.drive.allowedEmail || undefined
       });
     }
@@ -1748,6 +1831,7 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
     function handleDriveSignOut() {
       safeLsRemove(DRIVE_TOKEN_KEY);
       safeLsRemove(DRIVE_EXPIRES_KEY);
+      state.drive.accessToken = '';
       if (state.drive.tokenRefreshTimer) {
         clearTimeout(state.drive.tokenRefreshTimer);
         state.drive.tokenRefreshTimer = null;
@@ -1764,16 +1848,17 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
 
     async function verifyAndLoadDriveUser(isSilentRestore) {
       try {
-        const tokenObj = window.gapi && window.gapi.client ? window.gapi.client.getToken() : null;
-        if (!tokenObj || !tokenObj.access_token) return;
+        const token = getDriveAccessToken();
+        if (!token) return;
 
         const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: 'Bearer ' + tokenObj.access_token }
+          headers: { Authorization: 'Bearer ' + token }
         });
 
         if (!res.ok) {
           safeLsRemove(DRIVE_TOKEN_KEY);
           safeLsRemove(DRIVE_EXPIRES_KEY);
+          state.drive.accessToken = '';
           state.drive.connected = false;
           updateDriveModalUI();
           setSyncStatus('code-only', 'Phiên Google Drive đã hết hạn — Bấm Đăng nhập lại');
@@ -1785,7 +1870,10 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
         if (allowed && String(userInfo.email || '').toLowerCase() !== allowed) {
           safeLsRemove(DRIVE_TOKEN_KEY);
           safeLsRemove(DRIVE_EXPIRES_KEY);
-          window.gapi.client.setToken(null);
+          state.drive.accessToken = '';
+          if (window.gapi && window.gapi.client) {
+            window.gapi.client.setToken(null);
+          }
           state.drive.connected = false;
           updateDriveModalUI();
           setSyncStatus('error', 'Chặn truy cập: Email không khớp');
@@ -1799,6 +1887,11 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
         updateDriveModalUI();
         setSyncStatus('saved', '☁️ Đã kết nối Drive: ' + state.drive.userEmail);
 
+        await waitForGapiClientReady(5000);
+        if (window.gapi && window.gapi.client) {
+          window.gapi.client.setToken({ access_token: token });
+        }
+
         await loadDataFromDrive({ silent: isSilentRestore, force: false });
       } catch (err) {
         console.error('Lỗi xác thực tài khoản Google Drive:', err);
@@ -1806,9 +1899,37 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
       }
     }
 
+    // Tìm ID file trac_nghiem_sac_mau_database.json trên Google Drive
+    async function findExistingDriveFileId(token) {
+      const escapedName = state.drive.fileName.replace(/'/g, "\\'");
+      const query = "name='" + escapedName + "' and trashed=false";
+
+      if (state.drive.gapiInited && window.gapi && window.gapi.client && window.gapi.client.drive) {
+        window.gapi.client.setToken({ access_token: token });
+        const res = await window.gapi.client.drive.files.list({
+          q: query,
+          fields: 'files(id, name)'
+        });
+        const files = (res.result && res.result.files) || [];
+        return files.length > 0 ? files[0].id : null;
+      }
+
+      const listUrl = 'https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent(query) + '&fields=files(id,name)';
+      const listRes = await fetch(listUrl, {
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      if (!listRes.ok) {
+        throw new Error(await extractDriveErrorMessage(listRes));
+      }
+      const listJson = await listRes.json();
+      const files = (listJson && listJson.files) || [];
+      return files.length > 0 ? files[0].id : null;
+    }
+
     async function loadDataFromDrive(options) {
       const opts = options || {};
-      if (!state.drive.gapiInited || !window.gapi || !window.gapi.client || !window.gapi.client.getToken()) return false;
+      const token = getDriveAccessToken();
+      if (!token) return false;
       if (state.drive.isSyncing) return false;
 
       try {
@@ -1816,25 +1937,24 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
           setSyncStatus('saving', '☁️ Đang đồng bộ từ Google Drive...');
         }
 
-        const escapedName = state.drive.fileName.replace(/'/g, "\\'");
-        const res = await window.gapi.client.drive.files.list({
-          q: "name='" + escapedName + "' and trashed=false",
-          fields: 'files(id, name)'
-        });
-
-        const files = (res.result && res.result.files) || [];
-        if (files.length > 0) {
-          state.drive.fileId = files[0].id;
+        const foundFileId = await findExistingDriveFileId(token);
+        if (foundFileId) {
+          state.drive.fileId = foundFileId;
           safeLsSet(DRIVE_FILE_ID_KEY, state.drive.fileId);
 
-          const fileRes = await window.gapi.client.drive.files.get({
-            fileId: state.drive.fileId,
-            alt: 'media'
-          });
+          const fileRes = await fetch(
+            'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(state.drive.fileId) + '?alt=media',
+            { headers: { Authorization: 'Bearer ' + token } }
+          );
+          if (!fileRes.ok) {
+            throw new Error(await extractDriveErrorMessage(fileRes));
+          }
 
-          let data = fileRes.result;
-          if (typeof data === 'string') {
-            try { data = JSON.parse(data); } catch (e) { data = null; }
+          let data = null;
+          try {
+            data = await fileRes.json();
+          } catch (e) {
+            data = null;
           }
 
           if (data && typeof data === 'object' && Array.isArray(data.questions)) {
@@ -1879,9 +1999,13 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
         return await saveToDrive({ urgent: false, silent: opts.silent });
       } catch (err) {
         console.error('Lỗi tải dữ liệu từ Google Drive:', err);
+        const detail = err && err.message ? err.message : '';
+        if (detail.indexOf('403') !== -1) {
+          state.drive.needsConsent = true;
+        }
         setSyncStatus('error', 'Lỗi tải Google Drive (Dữ liệu vẫn an toàn trên máy)');
         if (!opts.silent) {
-          showToast('Không thể tải dữ liệu từ Google Drive. Vui lòng kiểm tra kết nối mạng!', 'error');
+          showToast('Không thể tải dữ liệu từ Google Drive' + (detail ? ' (' + detail + ')' : '') + '!', 'error');
         }
         return false;
       }
@@ -1890,7 +2014,9 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
     async function saveToDrive(options) {
       const opts = options || {};
       const isUrgentExit = Boolean(opts.urgent);
-      if (!state.drive.gapiInited || !window.gapi || !window.gapi.client || !window.gapi.client.getToken()) {
+      const isRetry = Boolean(opts.isRetry);
+      const token = getDriveAccessToken();
+      if (!token) {
         return false;
       }
 
@@ -1912,19 +2038,37 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
 
         const fileContent = JSON.stringify(dbContent);
         const payloadSize = new Blob([fileContent]).size;
-        const canKeepAlive = payloadSize < 60000;
-        const token = window.gapi.client.getToken().access_token;
+        // Chỉ dùng keepalive khi sắp thoát trang và dung lượng nhỏ (<50KB) để tránh Chrome chặn fetch()
+        const useKeepAlive = isUrgentExit && payloadSize < 50000;
+
+        // Nếu chưa nhớ fileId, kiểm tra nhanh xem trên Drive đã có file chưa để tránh tạo file trùng
+        if (!state.drive.fileId && !isUrgentExit) {
+          try {
+            const existingId = await findExistingDriveFileId(token);
+            if (existingId) {
+              state.drive.fileId = existingId;
+              safeLsSet(DRIVE_FILE_ID_KEY, existingId);
+            }
+          } catch (lookupErr) {
+            console.warn('Không tra cứu được file cũ trên Drive, sẽ tạo mới:', lookupErr);
+          }
+        }
 
         if (state.drive.fileId) {
-          const res = await fetch('https://www.googleapis.com/upload/drive/v3/files/' + state.drive.fileId + '?uploadType=media', {
+          const fetchOpts = {
             method: 'PATCH',
-            keepalive: canKeepAlive,
             headers: {
               Authorization: 'Bearer ' + token,
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json; charset=UTF-8'
             },
             body: fileContent
-          });
+          };
+          if (useKeepAlive) fetchOpts.keepalive = true;
+
+          const res = await fetch(
+            'https://www.googleapis.com/upload/drive/v3/files/' + encodeURIComponent(state.drive.fileId) + '?uploadType=media',
+            fetchOpts
+          );
 
           if (res.status === 401) {
             if (state.drive.tokenClient && !isUrgentExit) {
@@ -1933,35 +2077,58 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
                 login_hint: state.drive.allowedEmail || undefined
               });
             }
-            throw new Error('Token Google Drive hết hạn (401)');
+            throw new Error('Phiên Google Drive hết hạn (401)');
           }
-          if (res.status === 404) {
+          if (res.status === 404 && !isRetry) {
             state.drive.fileId = null;
             safeLsRemove(DRIVE_FILE_ID_KEY);
             state.drive.isSyncing = false;
-            return await saveToDrive(opts);
+            return await saveToDrive({ ...opts, isRetry: true });
           }
           if (!res.ok) {
-            throw new Error('HTTP ' + res.status);
+            throw new Error(await extractDriveErrorMessage(res));
           }
         } else {
+          // Tạo file mới đúng chuẩn multipart/related của Google Drive API v3
+          const boundary = '-------trac_nghiem_drive_boundary_' + Date.now();
           const metadata = {
             name: state.drive.fileName,
             mimeType: 'application/json'
           };
-          const form = new FormData();
-          form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-          form.append('file', new Blob([fileContent], { type: 'application/json' }));
+          const multipartBody =
+            '--' + boundary + '\r\n' +
+            'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+            JSON.stringify(metadata) + '\r\n' +
+            '--' + boundary + '\r\n' +
+            'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+            fileContent + '\r\n' +
+            '--' + boundary + '--';
 
-          const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+          const fetchOpts = {
             method: 'POST',
-            keepalive: canKeepAlive,
-            headers: { Authorization: 'Bearer ' + token },
-            body: form
-          });
-          if (!res.ok) {
-            throw new Error('HTTP ' + res.status);
+            headers: {
+              Authorization: 'Bearer ' + token,
+              'Content-Type': 'multipart/related; boundary=' + boundary
+            },
+            body: multipartBody
+          };
+          if (useKeepAlive) fetchOpts.keepalive = true;
+
+          const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', fetchOpts);
+
+          if (res.status === 401) {
+            if (state.drive.tokenClient && !isUrgentExit) {
+              state.drive.tokenClient.requestAccessToken({
+                prompt: '',
+                login_hint: state.drive.allowedEmail || undefined
+              });
+            }
+            throw new Error('Phiên Google Drive hết hạn (401)');
           }
+          if (!res.ok) {
+            throw new Error(await extractDriveErrorMessage(res));
+          }
+
           const file = await res.json();
           if (file && file.id) {
             state.drive.fileId = file.id;
@@ -1982,9 +2149,18 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
         return true;
       } catch (err) {
         console.error('Lỗi sao lưu lên Google Drive:', err);
-        setSyncStatus('error', 'Chưa lưu được lên Drive (Đang lưu an toàn trên máy)');
-        if (!opts.silent) {
-          showToast('Chưa lưu được lên Google Drive, dữ liệu vẫn an toàn trên máy này!', 'warning');
+        const detail = err && err.message ? err.message : '';
+        if (detail.indexOf('403') !== -1) {
+          state.drive.needsConsent = true;
+          setSyncStatus('error', 'Thiếu quyền Drive (403) — Hãy Đăng nhập lại & cấp quyền');
+          if (!opts.silent) {
+            showToast('Google Drive báo thiếu quyền (403). Hãy vào Cài đặt đồng bộ -> Đổi tài khoản Google và tích chọn quyền Google Drive!', 'warning');
+          }
+        } else {
+          setSyncStatus('error', 'Chưa lưu được lên Drive (Đang lưu an toàn trên máy)');
+          if (!opts.silent) {
+            showToast('Chưa lưu được lên Google Drive' + (detail ? ' (' + detail + ')' : '') + ' — dữ liệu vẫn an toàn trên máy này!', 'warning');
+          }
         }
         return false;
       } finally {
@@ -2007,7 +2183,7 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
         state.drive.autoSyncTimer = null;
       }
 
-      if (!state.drive.connected || !window.gapi || !window.gapi.client || !window.gapi.client.getToken()) {
+      if (!state.drive.connected || !getDriveAccessToken()) {
         return false;
       }
 
