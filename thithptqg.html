@@ -3473,6 +3473,7 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
     }
 
     function switchBankSubtab(subtab) {
+      function switchBankSubtab(subtab) {
       const singleForm = document.getElementById('single-question-form');
       const bulkPanel = document.getElementById('bulk-import-panel');
       const singleBtn = document.getElementById('subtab-single-btn');
@@ -3486,5 +3487,939 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
       } else {
         singleForm.classList.add('hidden');
         bulkPanel.classList.remove('hidden');
-        bulkBtn.className = 'btn-vibrant px-
-  </html>
+        bulkBtn.className = 'btn-vibrant px-4 py-2 rounded-xl bg-white text-purple-900 font-bold text-[17px] shadow-sm cursor-pointer';
+        singleBtn.className = 'btn-vibrant px-4 py-2 rounded-xl text-purple-800 font-bold text-[17px] cursor-pointer';
+      }
+    }
+
+    function getFilteredBankQuestions() {
+      const keyword = state.searchQuery.trim().toLowerCase();
+      return state.questions.filter((q) => {
+        const qSub = normalizeSubjectName(q.subject);
+        const qLes = normalizeLessonName(q.lesson);
+        if (state.selectedBankSubject !== 'ALL' && qSub !== state.selectedBankSubject) return false;
+        if (state.selectedBankLesson !== 'ALL' && qLes !== state.selectedBankLesson) return false;
+        if (!keyword) return true;
+        return (
+          qSub.toLowerCase().includes(keyword) ||
+          qLes.toLowerCase().includes(keyword) ||
+          q.question.toLowerCase().includes(keyword) ||
+          q.options.some((o) => o.toLowerCase().includes(keyword)) ||
+          (q.explanation || '').toLowerCase().includes(keyword)
+        );
+      });
+    }
+
+    function renderBankList() {
+      const container = document.getElementById('bank-questions-list');
+      const totalBadge = document.getElementById('bank-list-total-badge');
+      const deleteAllBtn = document.getElementById('btn-delete-all-questions');
+      if (!container || !totalBadge) return;
+
+      const filtered = getFilteredBankQuestions();
+      totalBadge.textContent = filtered.length === state.questions.length
+        ? state.questions.length + ' câu'
+        : filtered.length + ' / ' + state.questions.length + ' câu';
+
+      if (deleteAllBtn) {
+        deleteAllBtn.textContent = state.selectedBankSubject === 'ALL' && state.selectedBankLesson === 'ALL'
+          ? '🗑 Xóa tất cả'
+          : '🗑 Xóa mục đang lọc';
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML =
+          '<div class="text-center py-10 px-4 rounded-2xl bg-purple-50/70 border-2 border-dashed border-purple-200">' +
+            '<div class="text-4xl mb-2">' + (state.questions.length === 0 ? '📭' : '🔎') + '</div>' +
+            '<p class="text-[18px] font-bold text-purple-900">' +
+              (state.questions.length === 0 ? 'Chưa có câu hỏi nào trong ngân hàng THPTQG.' : 'Không tìm thấy câu hỏi nào khớp bộ lọc đang chọn.') +
+            '</p>' +
+          '</div>';
+        return;
+      }
+
+      container.innerHTML = '';
+      filtered.forEach((q, displayIdx) => {
+        const card = document.createElement('article');
+        card.className = 'p-4 sm:p-5 rounded-2xl bg-white border-2 border-purple-100 hover:border-pink-300 shadow-sm transition-colors';
+
+        const optsHtml = q.options
+          .map((opt, idx) => {
+            const label = OPTION_LABELS[idx];
+            const isCorrect = idx === q.correct;
+            const styleClass = isCorrect
+              ? 'bg-emerald-50 border-emerald-400 text-emerald-950 font-bold'
+              : 'bg-slate-50 border-slate-200 text-slate-800';
+            return (
+              '<div class="p-2.5 rounded-xl border ' + styleClass + ' flex items-center gap-2.5 text-[18px]">' +
+                '<span class="badge-' + label + ' w-7 h-7 rounded-full inline-flex items-center justify-center font-bold text-[16px] shrink-0">' + label + '</span>' +
+                '<span class="break-words">' + escapeHtml(opt) + '</span>' +
+                (isCorrect ? '<span class="ml-auto text-emerald-700 font-bold shrink-0">✓ Đúng</span>' : '') +
+              '</div>'
+            );
+          })
+          .join('');
+
+        const explainHtml = q.explanation
+          ? '<div class="mt-3 p-3 rounded-xl bg-sky-50 border border-sky-200 text-sky-950 text-[17px]"><strong>💡 Giải thích:</strong> ' + escapeHtml(q.explanation) + '</div>'
+          : '';
+
+        const bankImageHtml = q.image
+          ? '<div class="mb-3"><img data-zoom-src="' + escapeHtml(q.image) + '" src="' + escapeHtml(q.image) + '" alt="Hình ảnh câu ' + (displayIdx + 1) + '" class="max-h-44 max-w-full rounded-xl object-contain border-2 border-purple-200 bg-purple-50/40 p-1 cursor-zoom-in" /></div>'
+          : '';
+
+        card.innerHTML =
+          '<div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">' +
+            '<div class="space-y-1.5">' +
+              '<div class="flex flex-wrap items-center gap-2">' +
+                '<span class="px-3 py-0.5 rounded-full bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-[16px]">Câu ' + (displayIdx + 1) + '</span>' +
+                '<span class="px-3 py-0.5 rounded-full bg-pink-100 border border-pink-300 text-pink-900 font-bold text-[16px]">🎓 ' + escapeHtml(normalizeSubjectName(q.subject)) + '</span>' +
+                '<span class="px-3 py-0.5 rounded-full bg-sky-100 border border-sky-300 text-sky-900 font-bold text-[16px]">📖 ' + escapeHtml(normalizeLessonName(q.lesson)) + '</span>' +
+              '</div>' +
+              '<h3 class="text-[19px] font-bold text-purple-950 leading-snug break-words whitespace-pre-line">' + escapeHtml(q.question) + '</h3>' +
+            '</div>' +
+            '<div class="flex items-center gap-2 shrink-0 self-end sm:self-start">' +
+              '<button type="button" data-edit-id="' + escapeHtml(q.id) + '" class="btn-vibrant px-3.5 py-1.5 rounded-xl bg-amber-100 border border-amber-400 text-amber-950 font-bold text-[17px] cursor-pointer">✏️ Sửa</button>' +
+              '<button type="button" data-delete-id="' + escapeHtml(q.id) + '" class="btn-vibrant px-3.5 py-1.5 rounded-xl bg-rose-100 border border-rose-400 text-rose-900 font-bold text-[17px] cursor-pointer">🗑 Xóa</button>' +
+            '</div>' +
+          '</div>' +
+          bankImageHtml +
+          '<div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">' + optsHtml + '</div>' +
+          explainHtml;
+
+        const thumbImg = card.querySelector('[data-zoom-src]');
+        if (thumbImg) {
+          thumbImg.onerror = () => {
+            thumbImg.onerror = null;
+            thumbImg.src = IMAGE_FALLBACK_URL;
+          };
+          thumbImg.addEventListener('click', () => openImageLightbox(q.image));
+        }
+
+        card.querySelector('[data-edit-id]').addEventListener('click', () => startEditQuestion(q.id));
+        card.querySelector('[data-delete-id]').addEventListener('click', () => {
+          showConfirmModal({
+            title: 'Xóa câu hỏi này?',
+            message: 'Bạn có chắc chắn muốn xóa Câu ' + (displayIdx + 1) + ': "' + q.question.slice(0, 80) + (q.question.length > 80 ? '...' : '') + '"?',
+            confirmText: 'Xóa câu hỏi',
+            icon: '🗑',
+            confirmColor: 'danger',
+            onConfirm: async () => {
+              await persistDeleteQuestion(q.id);
+              if (document.getElementById('editing-question-id').value === q.id) resetSingleQuestionForm();
+              showToast('Đã xóa câu hỏi khỏi ngân hàng!', 'info');
+            }
+          });
+        });
+
+        container.appendChild(card);
+      });
+    }
+
+    // =========================================================================
+    // 10. PHÂN TÍCH VĂN BẢN NHẬP NHANH & RENDER TỔNG
+    // =========================================================================
+    function parseBulkQuestionsText(rawText, defaultSubjectForBulk, defaultLessonForBulk) {
+      const normalized = String(rawText || '').replace(/\r\n/g, '\n').trim();
+      if (!normalized) return [];
+
+      const rawBlocks = normalized
+        .split(/\n\s*\n+/)
+        .flatMap((block) => block.split(/\n(?=(?:Câu|Cau)\s*\d+\s*[:.)])/i))
+        .map((b) => b.trim())
+        .filter(Boolean);
+
+      const results = [];
+      const baseTime = Date.now();
+      const fallbackSubject = normalizeSubjectName(defaultSubjectForBulk);
+      const fallbackLesson = normalizeLessonName(defaultLessonForBulk);
+
+      rawBlocks.forEach((block, blockIdx) => {
+        const lines = block.split('\n').map((l) => l.trim()).filter(Boolean);
+        const questionLines = [];
+        const optionsMap = { A: '', B: '', C: '', D: '' };
+        let correctIdx = 0;
+        let explanation = '';
+        let image = '';
+        let subject = fallbackSubject;
+        let lesson = fallbackLesson;
+        let seenOption = false;
+
+        lines.forEach((line) => {
+          const optMatch = line.match(/^([A-D])\s*[.):-]\s*(.+)$/i);
+          const ansMatch = line.match(/^(?:Đáp\s*án|Dap\s*an|Answer|ĐA|DA)\s*[:.-]?\s*([A-D])\b/i);
+          const expMatch = line.match(/^(?:Giải\s*thích|Giai\s*thich|GT)\s*[:.-]?\s*(.+)$/i);
+          const subMatch = line.match(/^(?:Môn|Mon|Subject)\s*[:.-]\s*(.+)$/i);
+          const lessonMatch = line.match(/^(?:Bài|Bai|Chuyên\s*đề|Chuyen\s*de|Chủ\s*đề|Chu\s*de|Lesson)\s*[:.-]\s*(.+)$/i);
+          const imgMatch = line.match(/^(?:Hình\s*ảnh|Hinh\s*anh|Ảnh|Anh|Image|Img)\s*[:.-]?\s*(https?:\/\/\S+|data:image\/\S+)$/i);
+
+          if (ansMatch) {
+            const idx = OPTION_LABELS.indexOf(ansMatch[1].toUpperCase());
+            correctIdx = idx >= 0 ? idx : 0;
+          } else if (expMatch) {
+            explanation = expMatch[1].trim();
+          } else if (subMatch) {
+            subject = normalizeSubjectName(subMatch[1]);
+          } else if (lessonMatch) {
+            lesson = normalizeLessonName(lessonMatch[1]);
+          } else if (imgMatch) {
+            image = imgMatch[1].trim();
+          } else if (optMatch) {
+            seenOption = true;
+            optionsMap[optMatch[1].toUpperCase()] = optMatch[2].trim();
+          } else if (!seenOption) {
+            questionLines.push(line.replace(/^(?:Câu|Cau)\s*\d+\s*[:.)]\s*/i, '').trim());
+          }
+        });
+
+        const questionText = questionLines.join('\n').trim();
+        const options = [optionsMap.A, optionsMap.B, optionsMap.C, optionsMap.D];
+        if (questionText && options.every((o) => o.length > 0)) {
+          results.push({
+            id: generateId(),
+            subject,
+            lesson,
+            question: questionText,
+            options,
+            correct: correctIdx,
+            explanation,
+            image,
+            createdAt: baseTime + blockIdx * 10
+          });
+        }
+      });
+
+      return results;
+    }
+
+    function renderAll() {
+      const quizCountEl = document.getElementById('tab-quiz-count');
+      const bankCountEl = document.getElementById('tab-bank-count');
+      if (quizCountEl) quizCountEl.textContent = String(getQuizPoolQuestions().length);
+      if (bankCountEl) bankCountEl.textContent = String(state.questions.length);
+
+      renderLessonControls();
+      renderQuizSection();
+      renderBankList();
+      updateTimerUI();
+    }
+
+    // =========================================================================
+    // 11. XUẤT FILE HTML ĐÃ CẬP NHẬT CODE, TỰ GHI FILE, SAO CHÉP CODE & JSON
+    // =========================================================================
+    function buildUpdatedQuestionsJson() {
+      const cleanList = state.questions.map((q) => ({
+        id: q.id,
+        subject: normalizeSubjectName(q.subject),
+        lesson: normalizeLessonName(q.lesson),
+        question: q.question,
+        options: q.options,
+        correct: q.correct,
+        explanation: q.explanation || '',
+        image: q.image || '',
+        createdAt: q.createdAt || Date.now()
+      }));
+      return JSON.stringify(cleanList, null, 2).replace(new RegExp('<' + '/script>', 'gi'), '<\\/' + 'script>');
+    }
+
+    function buildUpdatedHtmlContent(versionTimestamp) {
+      if (!INITIAL_CLEAN_HTML) return null;
+      const startIdx = INITIAL_CLEAN_HTML.indexOf(MARKER_START);
+      const endIdx = INITIAL_CLEAN_HTML.indexOf(MARKER_END);
+      if (startIdx === -1 || endIdx === -1 || endIdx <= startIdx) return null;
+
+      let resultHtml =
+        INITIAL_CLEAN_HTML.slice(0, startIdx + MARKER_START.length) +
+        '\n' + buildUpdatedQuestionsJson() + '\n' +
+        INITIAL_CLEAN_HTML.slice(endIdx);
+
+      const vStartIdx = resultHtml.indexOf(VERSION_MARKER_START);
+      const vEndIdx = resultHtml.indexOf(VERSION_MARKER_END);
+      if (vStartIdx !== -1 && vEndIdx !== -1 && vEndIdx > vStartIdx) {
+        const stamp = typeof versionTimestamp === 'number' ? versionTimestamp : Date.now();
+        resultHtml = resultHtml.slice(0, vStartIdx + VERSION_MARKER_START.length) + '\n' + String(stamp) + '\n' + resultHtml.slice(vEndIdx);
+      }
+
+      const dStartIdx = resultHtml.indexOf(DRIVE_MARKER_START);
+      const dEndIdx = resultHtml.indexOf(DRIVE_MARKER_END);
+      if (dStartIdx !== -1 && dEndIdx !== -1 && dEndIdx > dStartIdx) {
+        const driveJson = JSON.stringify({
+          clientId: state.drive.clientId || '',
+          allowedEmail: state.drive.allowedEmail || '',
+          fileName: state.drive.fileName || 'on_thi_thptqg_database.json'
+        }, null, 2);
+        resultHtml = resultHtml.slice(0, dStartIdx + DRIVE_MARKER_START.length) + '\n' + driveJson + '\n' + resultHtml.slice(dEndIdx);
+      }
+
+      return resultHtml;
+    }
+
+    async function autoSaveToLinkedHtmlFile() {
+      if (!state.linkedFileHandle) return false;
+      try {
+        const versionStamp = Date.now();
+        const updatedHtml = buildUpdatedHtmlContent(versionStamp);
+        if (!updatedHtml) return false;
+
+        const writable = await state.linkedFileHandle.createWritable();
+        await writable.write(updatedHtml);
+        await writable.close();
+
+        setUnsavedLocalState(false);
+        saveQuestionsToLocalStorage({ updatedAt: versionStamp, baseVersion: versionStamp, unsavedToFile: false });
+        setSyncStatus('saved', 'Đã tự lưu vào file (' + state.questions.length + ' câu)');
+        return true;
+      } catch (err) {
+        state.linkedFileHandle = null;
+        setUnsavedLocalState(true);
+        saveQuestionsToLocalStorage({ unsavedToFile: true });
+        showToast('Không thể tự ghi vào file đã liên kết. Vui lòng chọn lại hoặc tải file HTML!', 'warning');
+        return false;
+      }
+    }
+
+    async function linkLocalHtmlFile() {
+      if (typeof window.showSaveFilePicker !== 'function') {
+        showToast('Trình duyệt hiện tại không hỗ trợ ghi trực tiếp. Đang tải xuống file HTML mới thay thế...', 'info');
+        downloadUpdatedHtmlFile();
+        return;
+      }
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: 'on-thi-thptqg.html',
+          types: [{ description: 'Trang web HTML', accept: { 'text/html': ['.html'] } }]
+        });
+        state.linkedFileHandle = handle;
+        const ok = await autoSaveToLinkedHtmlFile();
+        if (ok) {
+          const linkBtn = document.getElementById('btn-link-html-file');
+          if (linkBtn) linkBtn.textContent = '✅ Đang tự lưu vào: ' + handle.name;
+          showToast('Đã liên kết "' + handle.name + '"! Mọi thao tác thêm/sửa/xóa sẽ tự động ghi vào code.', 'success');
+        }
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;
+        downloadUpdatedHtmlFile();
+      }
+    }
+
+    function downloadUpdatedHtmlFile() {
+      try {
+        const versionStamp = Date.now();
+        const updatedHtml = buildUpdatedHtmlContent(versionStamp);
+        if (!updatedHtml) {
+          showToast('Không thể tạo nội dung HTML cập nhật.', 'error');
+          return;
+        }
+        const blob = new Blob([updatedHtml], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'on-thi-thptqg-cap-nhat.html';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+
+        setUnsavedLocalState(false);
+        saveQuestionsToLocalStorage({ updatedAt: versionStamp, baseVersion: versionStamp, unsavedToFile: false });
+        if (!state.cloudEnabled && !state.drive.connected) {
+          setSyncStatus('saved', 'Đã xuất file mới (' + state.questions.length + ' câu)');
+        }
+        showToast('Đã tải "on-thi-thptqg-cap-nhat.html" (' + state.questions.length + ' câu)!', 'success');
+      } catch (err) {
+        showToast('Có lỗi xảy ra khi xuất file HTML.', 'error');
+      }
+    }
+
+    function copyQuestionsCodeSnippet() {
+      try {
+        const snippet = MARKER_START + '\n' + buildUpdatedQuestionsJson() + '\n' + MARKER_END;
+        const textarea = document.createElement('textarea');
+        textarea.value = snippet;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.top = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        textarea.setSelectionRange(0, textarea.value.length);
+        const ok = document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showToast(ok ? 'Đã sao chép đoạn code của ' + state.questions.length + ' câu hỏi!' : 'Không thể sao chép tự động.', ok ? 'success' : 'warning');
+      } catch (err) {
+        showToast('Lỗi khi sao chép đoạn code.', 'error');
+      }
+    }
+
+    function exportQuestionsJson() {
+      try {
+        const blob = new Blob([JSON.stringify(state.questions, null, 2)], { type: 'application/json;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'ngan-hang-thptqg.json';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+        showToast('Đã xuất file JSON (' + state.questions.length + ' câu hỏi)!', 'success');
+      } catch (err) {
+        showToast('Có lỗi khi xuất file JSON.', 'error');
+      }
+    }
+
+    function handleImportJsonFile(file, replaceAllMode) {
+      if (!file) return;
+      const defaultSubjectForImport = state.selectedBankSubject !== 'ALL' ? state.selectedBankSubject : DEFAULT_SUBJECT;
+      const defaultLessonForImport = state.selectedBankLesson !== 'ALL' ? state.selectedBankLesson : DEFAULT_LESSON;
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const rawParsed = JSON.parse(String(e.target.result || ''));
+          const parsed = Array.isArray(rawParsed) ? rawParsed : (rawParsed && Array.isArray(rawParsed.questions) ? rawParsed.questions : null);
+          if (!Array.isArray(parsed)) {
+            showToast('File JSON không đúng định dạng mảng câu hỏi.', 'error');
+            return;
+          }
+
+          const validItems = parsed
+            .filter((item) => item && item.question && Array.isArray(item.options) && item.options.length === 4)
+            .map((item, idx) => ({
+              id: replaceAllMode && item.id ? String(item.id) : generateId(),
+              subject: normalizeSubjectName(item.subject || defaultSubjectForImport),
+              lesson: normalizeLessonName(item.lesson || defaultLessonForImport),
+              question: String(item.question).trim(),
+              options: item.options.map((o) => String(o || '').trim()),
+              correct: Number.isInteger(item.correct) && item.correct >= 0 && item.correct <= 3 ? item.correct : 0,
+              explanation: String(item.explanation || '').trim(),
+              image: String(item.image || '').trim(),
+              createdAt: typeof item.createdAt === 'number' ? item.createdAt : Date.now() + idx * 10
+            }));
+
+          if (validItems.length === 0) {
+            showToast('Không tìm thấy câu hỏi hợp lệ nào trong file JSON.', 'warning');
+            return;
+          }
+
+          if (replaceAllMode) {
+            const oldIds = state.questions.map((q) => q.id);
+            state.questions = validItems;
+            state.customLessons = [];
+            state.selectedQuizSubject = 'ALL';
+            state.selectedQuizLesson = 'ALL';
+            state.selectedBankSubject = 'ALL';
+            state.selectedBankLesson = 'ALL';
+            state.userAnswers = {};
+            state.reviewWrongMode = false;
+            syncQuizOrderWithQuestions();
+            renderAll();
+
+            if (state.cloudEnabled && state.user && state.db && fb.writeBatch) {
+              const newIdSet = new Set(validItems.map((q) => q.id));
+              const idsToRemove = oldIds.filter((id) => !newIdSet.has(id));
+              if (idsToRemove.length > 0) await persistDeleteManyQuestions(idsToRemove);
+              await persistSaveManyQuestions(validItems);
+            } else {
+              await handleOfflinePersistenceAfterChange();
+            }
+            closeSyncModal();
+            showToast('Đã đồng bộ thay thế toàn bộ ' + validItems.length + ' câu hỏi THPTQG!', 'success');
+          } else {
+            await persistSaveManyQuestions(validItems);
+            showToast('Đã nhập thêm ' + validItems.length + ' câu hỏi từ file JSON!', 'success');
+          }
+        } catch (err) {
+          showToast('File JSON bị lỗi cú pháp, không thể đọc được.', 'error');
+        }
+      };
+      reader.readAsText(file, 'utf-8');
+    }
+
+    // =========================================================================
+    // 12. CHUYỂN TAB & GẮN CÁC SỰ KIỆN GIAO DIỆN
+    // =========================================================================
+    function switchMainTab(tabName) {
+      state.activeTab = tabName;
+      const quizPanel = document.getElementById('panel-quiz');
+      const bankPanel = document.getElementById('panel-bank');
+      const quizBtn = document.getElementById('tab-btn-quiz');
+      const bankBtn = document.getElementById('tab-btn-bank');
+      const quizCount = document.getElementById('tab-quiz-count');
+      const bankCount = document.getElementById('tab-bank-count');
+
+      if (tabName === 'quiz') {
+        quizPanel.classList.remove('hidden');
+        bankPanel.classList.add('hidden');
+        quizBtn.className = 'btn-vibrant flex-1 sm:flex-none px-6 py-3 rounded-2xl font-bold text-[18px] flex items-center justify-center gap-2 bg-white text-purple-800 shadow-lg border-2 border-white cursor-pointer';
+        bankBtn.className = 'btn-vibrant flex-1 sm:flex-none px-6 py-3 rounded-2xl font-bold text-[18px] flex items-center justify-center gap-2 bg-white/20 text-white hover:bg-white/30 border-2 border-white/50 cursor-pointer';
+        quizCount.className = 'ml-1 px-2.5 py-0.5 rounded-full bg-pink-100 text-pink-700 text-[16px]';
+        bankCount.className = 'ml-1 px-2.5 py-0.5 rounded-full bg-white/25 text-white text-[16px]';
+        renderQuizSection();
+      } else {
+        quizPanel.classList.add('hidden');
+        bankPanel.classList.remove('hidden');
+        bankBtn.className = 'btn-vibrant flex-1 sm:flex-none px-6 py-3 rounded-2xl font-bold text-[18px] flex items-center justify-center gap-2 bg-white text-purple-800 shadow-lg border-2 border-white cursor-pointer';
+        quizBtn.className = 'btn-vibrant flex-1 sm:flex-none px-6 py-3 rounded-2xl font-bold text-[18px] flex items-center justify-center gap-2 bg-white/20 text-white hover:bg-white/30 border-2 border-white/50 cursor-pointer';
+        bankCount.className = 'ml-1 px-2.5 py-0.5 rounded-full bg-pink-100 text-pink-700 text-[16px]';
+        quizCount.className = 'ml-1 px-2.5 py-0.5 rounded-full bg-white/25 text-white text-[16px]';
+        renderLessonControls();
+        renderBankList();
+      }
+    }
+
+    async function restoreSampleQuestions() {
+      const existingTexts = new Set(state.questions.map((q) => q.question.trim().toLowerCase()));
+      const toAdd = cloneQuestions(DEFAULT_QUESTIONS)
+        .filter((q) => !existingTexts.has(q.question.trim().toLowerCase()))
+        .map((q, idx) => ({
+          ...q,
+          id: state.questions.some((ex) => ex.id === q.id) ? generateId() : q.id,
+          createdAt: Date.now() + idx * 10
+        }));
+
+      if (toAdd.length === 0) {
+        showToast('Tất cả câu mẫu THPTQG đã có sẵn trong ngân hàng của bạn!', 'info');
+        return;
+      }
+      await persistSaveManyQuestions(toAdd);
+      showToast('Đã nạp thêm ' + toAdd.length + ' câu hỏi mẫu THPTQG!', 'success');
+    }
+
+    function bindEvents() {
+      document.getElementById('tab-btn-quiz').addEventListener('click', () => switchMainTab('quiz'));
+      document.getElementById('tab-btn-bank').addEventListener('click', () => switchMainTab('bank'));
+
+      // Chọn Môn & Chuyên đề ở Tab Làm bài
+      document.getElementById('quiz-subject-select').addEventListener('change', (e) => selectQuizSubject(e.target.value));
+      document.getElementById('quiz-lesson-select').addEventListener('change', (e) => selectQuizLesson(e.target.value));
+
+      // Bộ đếm giờ thi thử
+      document.getElementById('quiz-timer-preset').addEventListener('change', (e) => setQuizTimerPreset(e.target.value));
+      document.getElementById('btn-timer-toggle').addEventListener('click', toggleQuizTimer);
+      document.getElementById('btn-timer-reset').addEventListener('click', () => setQuizTimerPreset(state.timer.presetMinutes));
+
+      // Lọc Môn & Chuyên đề ở Tab Ngân hàng
+      document.getElementById('bank-subject-filter').addEventListener('change', (e) => {
+        state.selectedBankSubject = e.target.value;
+        state.selectedBankLesson = 'ALL';
+        if (state.selectedBankSubject !== 'ALL') {
+          if (!document.getElementById('editing-question-id').value) {
+            document.getElementById('input-question-subject').value = state.selectedBankSubject;
+          }
+          document.getElementById('input-bulk-subject').value = state.selectedBankSubject;
+        }
+        renderLessonControls();
+        renderBankList();
+      });
+
+      document.getElementById('bank-lesson-filter').addEventListener('change', (e) => {
+        state.selectedBankLesson = e.target.value;
+        if (state.selectedBankLesson !== 'ALL') {
+          if (!document.getElementById('editing-question-id').value) {
+            document.getElementById('input-question-lesson').value = state.selectedBankLesson;
+          }
+          document.getElementById('input-bulk-lesson').value = state.selectedBankLesson;
+        }
+        renderLessonControls();
+        renderBankList();
+      });
+
+      // Tạo chuyên đề mới nhanh
+      async function handleAddLesson() {
+        const subInput = document.getElementById('input-new-lesson-subject');
+        const lesInput = document.getElementById('input-new-lesson-name');
+        const subject = normalizeSubjectName(subInput.value || (state.selectedBankSubject !== 'ALL' ? state.selectedBankSubject : DEFAULT_SUBJECT));
+        const name = lesInput.value.trim();
+        if (!name) {
+          showToast('Vui lòng nhập tên chuyên đề / bài học mới!', 'warning');
+          return;
+        }
+        const exists = state.customLessons.some((x) => x.subject === subject && x.lesson === name);
+        if (!exists) {
+          state.customLessons.push({ subject, lesson: name });
+          await handleOfflinePersistenceAfterChange();
+        }
+        state.selectedBankSubject = subject;
+        state.selectedBankLesson = name;
+        document.getElementById('input-question-subject').value = subject;
+        document.getElementById('input-question-lesson').value = name;
+        document.getElementById('input-bulk-subject').value = subject;
+        document.getElementById('input-bulk-lesson').value = name;
+        lesInput.value = '';
+        renderLessonControls();
+        renderBankList();
+        showToast('Đã tạo chuyên đề "' + name + '" (' + subject + ')!', 'success');
+      }
+
+      document.getElementById('btn-add-lesson').addEventListener('click', handleAddLesson);
+      document.getElementById('input-new-lesson-name').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); handleAddLesson(); }
+      });
+
+      // Google Drive & Đồng bộ
+      document.getElementById('header-gdrive-auth-btn').addEventListener('click', handleDriveAuthClick);
+      document.getElementById('header-gdrive-sync-btn').addEventListener('click', async () => {
+        if (state.drive.hasUnsyncedChanges) await saveToDrive({ urgent: false, silent: false });
+        else await loadDataFromDrive({ silent: false, force: true });
+      });
+      document.getElementById('header-cloud-sync-btn').addEventListener('click', openSyncModal);
+      document.getElementById('bank-cloud-sync-btn').addEventListener('click', openSyncModal);
+      document.getElementById('sync-modal-close-btn').addEventListener('click', closeSyncModal);
+      document.getElementById('sync-modal-overlay').addEventListener('click', (e) => {
+        if (e.target.id === 'sync-modal-overlay') closeSyncModal();
+      });
+
+      document.getElementById('btn-drive-save-settings').addEventListener('click', () => {
+        const clientId = document.getElementById('input-drive-client-id').value.trim();
+        const allowedEmail = document.getElementById('input-drive-email').value.trim();
+        if (!clientId) {
+          showToast('Vui lòng nhập Google OAuth Client ID!', 'warning');
+          return;
+        }
+        state.drive.clientId = clientId;
+        state.drive.allowedEmail = allowedEmail;
+        saveDriveConfigToStorage();
+        initDriveTokenClient();
+        updateDriveModalUI();
+        showToast('Đã lưu cấu hình Google Drive!', 'success');
+      });
+
+      document.getElementById('btn-drive-modal-login').addEventListener('click', () => {
+        const clientId = document.getElementById('input-drive-client-id').value.trim();
+        const allowedEmail = document.getElementById('input-drive-email').value.trim();
+        if (clientId) {
+          state.drive.clientId = clientId;
+          state.drive.allowedEmail = allowedEmail;
+          saveDriveConfigToStorage();
+          initDriveTokenClient();
+        }
+        handleDriveAuthClick();
+      });
+
+      document.getElementById('btn-drive-modal-pull').addEventListener('click', async () => {
+        if (!state.drive.connected) { showToast('Vui lòng bấm "Đăng nhập Google Drive" trước!', 'warning'); return; }
+        await loadDataFromDrive({ silent: false, force: true });
+      });
+
+      document.getElementById('btn-drive-modal-push').addEventListener('click', async () => {
+        if (!state.drive.connected) { showToast('Vui lòng bấm "Đăng nhập Google Drive" trước!', 'warning'); return; }
+        await saveToDrive({ urgent: false, silent: false });
+      });
+
+      document.getElementById('btn-drive-modal-logout').addEventListener('click', handleDriveSignOut);
+      document.getElementById('btn-sync-export-json').addEventListener('click', exportQuestionsJson);
+      document.getElementById('btn-sync-import-replace-json').addEventListener('click', () => {
+        document.getElementById('input-import-replace-json').click();
+      });
+      document.getElementById('input-import-replace-json').addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) handleImportJsonFile(file, true);
+        e.target.value = '';
+      });
+
+      document.addEventListener('visibilitychange', () => {
+        if (!state.drive.connected) return;
+        if (document.visibilityState === 'hidden') {
+          if (state.drive.hasUnsyncedChanges || state.drive.autoSyncTimer) {
+            if (state.drive.autoSyncTimer) { clearTimeout(state.drive.autoSyncTimer); state.drive.autoSyncTimer = null; }
+            saveToDrive({ urgent: true, silent: true });
+          }
+        } else if (document.visibilityState === 'visible') {
+          loadDataFromDrive({ silent: true, force: false });
+        }
+      });
+
+      document.getElementById('header-download-html-btn').addEventListener('click', downloadUpdatedHtmlFile);
+      document.getElementById('bank-download-html-btn').addEventListener('click', downloadUpdatedHtmlFile);
+      document.getElementById('btn-link-html-file').addEventListener('click', linkLocalHtmlFile);
+      document.getElementById('banner-link-file-btn').addEventListener('click', linkLocalHtmlFile);
+      document.getElementById('banner-download-html-btn').addEventListener('click', downloadUpdatedHtmlFile);
+      document.getElementById('btn-reload-from-file').addEventListener('click', reloadFromEmbeddedHtmlCode);
+
+      document.getElementById('btn-delete-all-questions').addEventListener('click', () => {
+        const targetQuestions = getFilteredBankQuestions();
+        if (targetQuestions.length === 0) {
+          showToast('Không có câu hỏi nào để xóa trong mục này!', 'info');
+          return;
+        }
+        showConfirmModal({
+          title: 'Xóa danh sách câu hỏi?',
+          message: 'Bạn có chắc chắn muốn xóa ' + targetQuestions.length + ' câu hỏi đang hiển thị theo bộ lọc? Thao tác này không thể hoàn tác.',
+          confirmText: 'Xóa ngay',
+          icon: '🗑',
+          confirmColor: 'danger',
+          onConfirm: async () => {
+            const ids = targetQuestions.map((q) => q.id);
+            await persistDeleteManyQuestions(ids);
+            resetSingleQuestionForm();
+            showToast('Đã xóa ' + ids.length + ' câu hỏi!', 'info');
+          }
+        });
+      });
+
+      window.addEventListener('beforeunload', (e) => {
+        if (state.drive.connected && (state.drive.hasUnsyncedChanges || state.drive.autoSyncTimer || state.drive.isSyncing)) {
+          if (state.drive.autoSyncTimer) { clearTimeout(state.drive.autoSyncTimer); state.drive.autoSyncTimer = null; }
+          saveToDrive({ urgent: true, silent: true });
+          const payloadSize = new Blob([JSON.stringify({ questions: state.questions })]).size;
+          if (payloadSize >= 60000) { e.preventDefault(); e.returnValue = ''; }
+          return;
+        }
+        if (state.hasUnsavedLocalChanges && !state.cloudEnabled && !state.drive.connected) {
+          e.preventDefault();
+          e.returnValue = '';
+        }
+      });
+
+      document.getElementById('btn-copy-code-snippet').addEventListener('click', copyQuestionsCodeSnippet);
+      document.getElementById('btn-export-json').addEventListener('click', exportQuestionsJson);
+      document.getElementById('btn-import-json').addEventListener('click', () => document.getElementById('input-import-json').click());
+      document.getElementById('input-import-json').addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) handleImportJsonFile(file, false);
+        e.target.value = '';
+      });
+
+      // Điều hướng & điều khiển bài trắc nghiệm
+      document.getElementById('btn-prev-question').addEventListener('click', () => goToQuestion(state.currentIndex - 1));
+      document.getElementById('btn-next-question').addEventListener('click', () => goToQuestion(state.currentIndex + 1));
+      document.getElementById('btn-shuffle-quiz').addEventListener('click', () => restartQuiz(true));
+      document.getElementById('btn-restart-quiz').addEventListener('click', () => restartQuiz(false));
+      document.getElementById('btn-summary-restart').addEventListener('click', () => restartQuiz(false));
+      document.getElementById('btn-summary-shuffle').addEventListener('click', () => restartQuiz(true));
+      document.getElementById('btn-review-wrong').addEventListener('click', startReviewWrongMode);
+      document.getElementById('btn-exit-review-mode').addEventListener('click', exitReviewWrongMode);
+
+      document.getElementById('btn-go-to-bank-empty').addEventListener('click', () => switchMainTab('bank'));
+      document.getElementById('btn-restore-sample-empty').addEventListener('click', restoreSampleQuestions);
+      document.getElementById('btn-restore-samples').addEventListener('click', restoreSampleQuestions);
+
+      document.getElementById('subtab-single-btn').addEventListener('click', () => switchBankSubtab('single'));
+      document.getElementById('subtab-bulk-btn').addEventListener('click', () => switchBankSubtab('bulk'));
+
+      // Xử lý hình ảnh
+      const imageFileInput = document.getElementById('input-image-file');
+      const imageUrlInput = document.getElementById('input-image-url');
+
+      async function handleImageFileChosen(file) {
+        if (!file) return;
+        try {
+          const result = await compressImageFileToDataUrl(file);
+          imageUrlInput.value = '';
+          updateFormImagePreview(result.dataUrl, '✓ Đã đính kèm ảnh (' + result.width + '×' + result.height + 'px • ~' + result.sizeKb + ' KB)');
+          showToast('Đã đính kèm hình ảnh gọn nhẹ (~' + result.sizeKb + ' KB)!', 'success');
+        } catch (err) {
+          showToast('Không thể đọc hình ảnh này. Vui lòng chọn tệp JPG, PNG, WebP...', 'error');
+        }
+      }
+
+      document.getElementById('btn-upload-image').addEventListener('click', () => imageFileInput.click());
+      imageFileInput.addEventListener('change', async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) await handleImageFileChosen(file);
+        e.target.value = '';
+      });
+      imageUrlInput.addEventListener('input', (e) => {
+        const urlVal = e.target.value.trim();
+        if (urlVal) updateFormImagePreview(urlVal, '✓ Đang dùng hình ảnh từ đường dẫn URL');
+        else if (!state.currentFormImage.startsWith('data:image/')) updateFormImagePreview('');
+      });
+      document.getElementById('btn-remove-image').addEventListener('click', () => {
+        imageUrlInput.value = '';
+        imageFileInput.value = '';
+        updateFormImagePreview('');
+        showToast('Đã gỡ hình ảnh khỏi câu hỏi.', 'info');
+      });
+      document.getElementById('image-preview-img').addEventListener('click', () => {
+        if (state.currentFormImage) openImageLightbox(state.currentFormImage);
+      });
+
+      document.addEventListener('paste', async (e) => {
+        if (state.activeTab !== 'bank') return;
+        const singleForm = document.getElementById('single-question-form');
+        if (!singleForm || singleForm.classList.contains('hidden')) return;
+        const items = e.clipboardData && e.clipboardData.items;
+        if (!items) return;
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type && items[i].type.startsWith('image/')) {
+            e.preventDefault();
+            const file = items[i].getAsFile();
+            if (file) await handleImageFileChosen(file);
+            break;
+          }
+        }
+      });
+
+      document.getElementById('lightbox-close-btn').addEventListener('click', closeImageLightbox);
+      document.getElementById('image-lightbox-overlay').addEventListener('click', (e) => {
+        if (e.target.id === 'image-lightbox-overlay') closeImageLightbox();
+      });
+
+      document.querySelectorAll('.correct-pick-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.selectedCorrectInForm = Number(btn.dataset.answer);
+          updateCorrectPickerUI();
+        });
+      });
+
+      // Lưu câu hỏi đơn lẻ
+      document.getElementById('single-question-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const editingId = document.getElementById('editing-question-id').value.trim();
+        const subject = normalizeSubjectName(document.getElementById('input-question-subject').value);
+        const lesson = normalizeLessonName(document.getElementById('input-question-lesson').value);
+        const questionText = document.getElementById('input-question-text').value.trim();
+        const optA = document.getElementById('input-opt-A').value.trim();
+        const optB = document.getElementById('input-opt-B').value.trim();
+        const optC = document.getElementById('input-opt-C').value.trim();
+        const optD = document.getElementById('input-opt-D').value.trim();
+        const explanation = document.getElementById('input-explanation').value.trim();
+        const image = state.currentFormImage || document.getElementById('input-image-url').value.trim();
+
+        if (!questionText || !optA || !optB || !optC || !optD) {
+          showToast('Vui lòng nhập đầy đủ nội dung câu hỏi và cả 4 đáp án A, B, C, D!', 'warning');
+          return;
+        }
+
+        const existing = editingId ? getQuestionById(editingId) : null;
+        await persistSaveQuestion({
+          id: editingId || generateId(),
+          subject,
+          lesson,
+          question: questionText,
+          options: [optA, optB, optC, optD],
+          correct: state.selectedCorrectInForm,
+          explanation,
+          image,
+          createdAt: existing ? existing.createdAt : Date.now()
+        });
+        resetSingleQuestionForm();
+        showToast(editingId ? 'Đã cập nhật câu hỏi thành công!' : 'Đã thêm câu hỏi vào "' + subject + ' - ' + lesson + '"!', 'success');
+      });
+
+      document.getElementById('btn-cancel-edit').addEventListener('click', resetSingleQuestionForm);
+
+      // Nhập nhanh nhiều câu hỏi
+      document.getElementById('btn-fill-bulk-sample').addEventListener('click', () => {
+        document.getElementById('input-bulk-text').value = [
+          'Câu 1: Đơn phân cấu tạo nên phân tử prôtêin là:',
+          'A. Nuclêôtit',
+          'B. Axit amin',
+          'C. Glucôzơ',
+          'D. Axit béo',
+          'Đáp án: B',
+          'Giải thích: Prôtêin là đại phân tử sinh học được cấu tạo theo nguyên tắc đa phân, đơn phân là các axit amin.',
+          '',
+          'Câu 2: Kim loại nào sau đây có tính khử mạnh nhất trong dãy hoạt động hóa học?',
+          'A. Fe',
+          'B. Cu',
+          'C. K',
+          'D. Ag',
+          'Đáp án: C',
+          'Giải thích: Kali (K) là kim loại kiềm đứng đầu dãy hoạt động hóa học phổ thông nên có tính khử mạnh nhất trong 4 kim loại trên.',
+          'Môn: Hóa học',
+          'Bài: Đại cương kim loại'
+        ].join('\n');
+      });
+
+      document.getElementById('btn-clear-bulk').addEventListener('click', () => {
+        document.getElementById('input-bulk-text').value = '';
+      });
+
+      document.getElementById('btn-process-bulk').addEventListener('click', async () => {
+        const raw = document.getElementById('input-bulk-text').value;
+        const targetSubject = normalizeSubjectName(document.getElementById('input-bulk-subject').value);
+        const targetLesson = normalizeLessonName(document.getElementById('input-bulk-lesson').value);
+        const parsed = parseBulkQuestionsText(raw, targetSubject, targetLesson);
+        if (parsed.length === 0) {
+          showToast('Không nhận diện được câu hỏi hợp lệ. Hãy kiểm tra lại định dạng A., B., C., D. và Đáp án:!', 'warning');
+          return;
+        }
+        await persistSaveManyQuestions(parsed);
+        document.getElementById('input-bulk-text').value = '';
+        showToast('Đã thêm thành công ' + parsed.length + ' câu hỏi THPTQG!', 'success');
+      });
+
+      document.getElementById('input-search-bank').addEventListener('input', (e) => {
+        state.searchQuery = e.target.value;
+        renderBankList();
+      });
+
+      // Modal xác nhận
+      document.getElementById('modal-cancel-btn').addEventListener('click', closeConfirmModal);
+      document.getElementById('modal-confirm-btn').addEventListener('click', async () => {
+        const cb = state.modalConfirmCallback;
+        const inputVal = document.getElementById('modal-input').value;
+        closeConfirmModal();
+        if (typeof cb === 'function') await cb(inputVal);
+      });
+      document.getElementById('custom-modal-overlay').addEventListener('click', (e) => {
+        if (e.target.id === 'custom-modal-overlay') closeConfirmModal();
+      });
+
+      // Phím tắt A/B/C/D & ←/→
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !document.getElementById('image-lightbox-overlay').classList.contains('hidden')) {
+          closeImageLightbox(); return;
+        }
+        if (e.key === 'Escape' && !document.getElementById('sync-modal-overlay').classList.contains('hidden')) {
+          closeSyncModal(); return;
+        }
+        if (state.activeTab !== 'quiz') return;
+        const tag = (e.target && e.target.tagName || '').toLowerCase();
+        if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+        if (!document.getElementById('custom-modal-overlay').classList.contains('hidden')) return;
+        if (!document.getElementById('image-lightbox-overlay').classList.contains('hidden')) return;
+        if (!document.getElementById('sync-modal-overlay').classList.contains('hidden')) return;
+
+        if (e.key === 'ArrowLeft') { e.preventDefault(); goToQuestion(state.currentIndex - 1); }
+        else if (e.key === 'ArrowRight') { e.preventDefault(); goToQuestion(state.currentIndex + 1); }
+        else {
+          const upper = e.key.toUpperCase();
+          const mapIdx = { A: 0, B: 1, C: 2, D: 3, '1': 0, '2': 1, '3': 2, '4': 3 };
+          if (Object.prototype.hasOwnProperty.call(mapIdx, upper) && state.quizOrder.length > 0) {
+            handleSelectAnswer(state.quizOrder[state.currentIndex], mapIdx[upper]);
+          }
+        }
+      });
+
+      // Vuốt trái/phải trên điện thoại
+      const quizCard = document.getElementById('quiz-question-card');
+      let touchStartX = 0;
+      let touchStartY = 0;
+      quizCard.addEventListener('touchstart', (e) => {
+        if (e.changedTouches.length === 1) {
+          touchStartX = e.changedTouches[0].clientX;
+          touchStartY = e.changedTouches[0].clientY;
+        }
+      }, { passive: true });
+      quizCard.addEventListener('touchend', (e) => {
+        if (e.changedTouches.length === 1) {
+          const dx = e.changedTouches[0].clientX - touchStartX;
+          const dy = e.changedTouches[0].clientY - touchStartY;
+          if (Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+            if (dx < 0) goToQuestion(state.currentIndex + 1);
+            else goToQuestion(state.currentIndex - 1);
+          }
+        }
+      }, { passive: true });
+    }
+
+    // =========================================================================
+    // 13. KHỞI CHẠY ỨNG DỤNG
+    // =========================================================================
+    function bootstrapApp() {
+      loadDriveConfig();
+      loadQuestionsFromLocalStorage();
+      syncQuizOrderWithQuestions();
+      updateCorrectPickerUI();
+      bindEvents();
+      renderAll();
+      initCloudStorage();
+      initGoogleDriveSync();
+    }
+
+    bootstrapApp();
+  })();
+  </script>
+</body>
+</html>
