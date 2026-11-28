@@ -572,8 +572,17 @@
             </button>
           </div>
 
-          <!-- Tiện ích Trộn & Làm lại -->
+          <!-- Tiện ích Làm lại câu sai, Trộn & Làm lại -->
           <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">
+            <button
+              id="btn-redo-wrong-bar"
+              type="button"
+              disabled
+              class="btn-vibrant flex-1 sm:flex-none px-5 py-3 rounded-2xl bg-gradient-to-r from-rose-500 to-red-600 text-white font-bold text-[18px] shadow-md cursor-pointer"
+              title="Làm lại ngay các câu đã trả lời sai trong bài đang chọn"
+            >
+              🔥 Làm lại câu sai (0)
+            </button>
             <button
               id="btn-shuffle-quiz"
               type="button"
@@ -3076,6 +3085,48 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
       renderQuizSection();
     }
 
+    const WRONG_IDS_STORAGE_KEY = 'trac_nghiem_sac_mau_wrong_ids_v1';
+
+    function loadSavedWrongIds() {
+      try {
+        const raw = window.localStorage.getItem(WRONG_IDS_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed.map(String) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveWrongIds(list) {
+      try {
+        window.localStorage.setItem(WRONG_IDS_STORAGE_KEY, JSON.stringify(list));
+      } catch (e) {}
+    }
+
+    function updateWrongIdRecord(questionId, isCorrect) {
+      if (!questionId) return;
+      const set = new Set(state.wrongQuestionIds || []);
+      if (isCorrect) {
+        set.delete(questionId);
+      } else {
+        set.add(questionId);
+      }
+      state.wrongQuestionIds = Array.from(set);
+      saveWrongIds(state.wrongQuestionIds);
+    }
+
+    function getWrongQuestionIdsInCurrentPool() {
+      const pool = getQuizPoolQuestions();
+      const savedSet = new Set(state.wrongQuestionIds || []);
+      return pool
+        .filter((q) => {
+          const ans = state.userAnswers[q.id];
+          if (ans !== undefined) return ans !== q.correct;
+          return savedSet.has(q.id);
+        })
+        .map((q) => q.id);
+    }
+
     function handleSelectAnswer(questionId, optionIndex) {
       if (!questionId || state.userAnswers[questionId] !== undefined) return;
       const q = getQuestionById(questionId);
@@ -3083,6 +3134,7 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
 
       if (typeof quizTimer !== 'undefined') quizTimer.onAnswerSelected();
       state.userAnswers[questionId] = optionIndex;
+      updateWrongIdRecord(questionId, optionIndex === q.correct);
 
       const allAnswered = state.quizOrder.length > 0 && state.quizOrder.every((id) => state.userAnswers[id] !== undefined);
       if (allAnswered && typeof quizTimer !== 'undefined') {
@@ -3114,14 +3166,10 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
     }
 
     function startReviewWrongMode() {
-      const wrongIds = state.quizOrder.filter((id) => {
-        const q = getQuestionById(id);
-        const ans = state.userAnswers[id];
-        return q && ans !== undefined && ans !== q.correct;
-      });
+      const wrongIds = getWrongQuestionIdsInCurrentPool();
 
       if (wrongIds.length === 0) {
-        showToast('Tuyệt vời! Bạn không có câu nào làm sai.', 'success');
+        showToast('Tuyệt vời! Bạn không có câu nào làm sai trong bài đang chọn.', 'success');
         return;
       }
 
@@ -3133,16 +3181,16 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
       state.currentIndex = 0;
       if (typeof quizTimer !== 'undefined') quizTimer.reset();
       renderQuizSection();
-      showToast('Bắt đầu ôn lại ' + wrongIds.length + ' câu làm sai!', 'info');
+      showToast('Bắt đầu làm lại ' + wrongIds.length + ' câu làm sai!', 'info');
     }
+
     function exitReviewWrongMode() {
       state.reviewWrongMode = false;
       state.quizOrder = getQuizPoolQuestions().map((q) => q.id);
       state.currentIndex = 0;
+      if (typeof quizTimer !== 'undefined') quizTimer.reset();
       renderQuizSection();
-    }
-
-    // =========================================================================
+    }    // =========================================================================
     // 7. HIỂN THỊ BỘ CHỌN BÀI HỌC & GIAO DIỆN LÀM BÀI TRẮC NGHIỆM
     // =========================================================================
     function renderLessonControls() {
@@ -3287,6 +3335,13 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
       const navDots = document.getElementById('question-nav-dots');
       const prevBtn = document.getElementById('btn-prev-question');
       const nextBtn = document.getElementById('btn-next-question');
+      const redoWrongBarBtn = document.getElementById('btn-redo-wrong-bar');
+
+      if (redoWrongBarBtn) {
+        const wrongPoolCount = getWrongQuestionIdsInCurrentPool().length;
+        redoWrongBarBtn.textContent = '🔥 Làm lại câu sai (' + wrongPoolCount + ')';
+        redoWrongBarBtn.disabled = wrongPoolCount === 0;
+      }
 
       if (state.reviewWrongMode) {
         reviewBadge.classList.remove('hidden');
@@ -4350,6 +4405,8 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
       document.getElementById('btn-restart-quiz').addEventListener('click', () => restartQuiz(false));
       document.getElementById('btn-summary-restart').addEventListener('click', () => restartQuiz(false));
       document.getElementById('btn-summary-shuffle').addEventListener('click', () => restartQuiz(true));
+      const redoWrongBarBtn = document.getElementById('btn-redo-wrong-bar');
+      if (redoWrongBarBtn) redoWrongBarBtn.addEventListener('click', startReviewWrongMode);
       document.getElementById('btn-review-wrong').addEventListener('click', startReviewWrongMode);
       document.getElementById('btn-exit-review-mode').addEventListener('click', exitReviewWrongMode);
 
@@ -4810,6 +4867,7 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
     function bootstrapApp() {
       loadDriveConfig();
       loadQuestionsFromLocalStorage();
+      state.wrongQuestionIds = loadSavedWrongIds();
       syncQuizOrderWithQuestions();
       updateCorrectPickerUI();
       bindEvents();
