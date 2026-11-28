@@ -355,6 +355,60 @@
         <div id="quiz-lesson-chips" class="flex flex-wrap gap-2 mt-3.5 pt-3 border-t border-purple-200/70"></div>
       </section>
 
+      <!-- Thẻ chế độ đếm giờ làm bài -->
+      <section id="quiz-timer-section" class="colorful-card rounded-3xl p-4 sm:p-5 border-2 border-pink-200 bg-gradient-to-r from-pink-50/80 via-white to-amber-50/80">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-2.5">
+            <span class="text-2xl">⏱️</span>
+            <span class="font-bold text-purple-950 text-[19px]">Đếm giờ làm bài:</span>
+            <select
+              id="timer-mode-select"
+              class="px-3.5 py-2 rounded-2xl border-2 border-purple-300 focus:border-pink-500 focus:outline-none bg-white text-purple-950 font-bold text-[17px] cursor-pointer"
+            >
+              <option value="stopwatch">⏱️ Đếm xuôi (Bấm giờ)</option>
+              <option value="countdown">⏳ Đếm ngược (Giới hạn phút)</option>
+            </select>
+            <div id="timer-minutes-wrap" class="hidden inline-flex items-center gap-1.5">
+              <input
+                id="timer-minutes-input"
+                type="number"
+                min="1"
+                max="300"
+                value="15"
+                class="w-20 px-3 py-1.5 rounded-xl border-2 border-pink-300 focus:border-purple-500 focus:outline-none bg-white text-center font-bold text-purple-950 text-[18px]"
+              />
+              <span class="font-bold text-purple-900 text-[17px]">phút</span>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2.5">
+            <div
+              id="timer-display-badge"
+              class="px-4 py-1.5 rounded-2xl bg-purple-100 border-2 border-purple-400 text-purple-950 font-bold text-[22px] tracking-wider min-w-[110px] text-center"
+            >
+              00:00
+            </div>
+            <button
+              id="btn-timer-toggle"
+              type="button"
+              class="btn-vibrant px-4 py-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-[17px] shadow-md cursor-pointer"
+            >
+              ▶ Bắt đầu
+            </button>
+            <button
+              id="btn-timer-reset"
+              type="button"
+              class="btn-vibrant px-4 py-2 rounded-2xl bg-white border-2 border-purple-300 text-purple-900 font-bold text-[17px] cursor-pointer"
+            >
+              🔄 Đặt lại
+            </button>
+          </div>
+        </div>
+        <p id="timer-hint-text" class="mt-2 text-[16px] text-purple-800/80">
+          💡 Tự động chạy khi bạn chọn đáp án đầu tiên, hoặc bấm <strong>Bắt đầu</strong> để tính giờ ngay. Tự động dừng khi hoàn thành hết bài.
+        </p>
+      </section>
+
       <!-- Thẻ tiến độ & Thống kê trực tiếp -->
       <section class="colorful-card rounded-3xl p-4 sm:p-6">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
@@ -549,7 +603,7 @@
 
       <!-- Khu vực Lưu trữ & Xuất code nổi bật -->
       <section class="colorful-card rounded-3xl p-5 sm:p-6 border-2 border-amber-300 bg-gradient-to-r from-amber-50/90 via-pink-50/90 to-sky-50/90">
-        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div class="flex flex-col gap-4">
           <div>
             <h2 class="text-[22px] font-bold text-purple-950 flex items-center gap-2">
               <span>⚡</span>
@@ -559,7 +613,7 @@
               Mọi thay đổi đều tự động lưu. Khi muốn chuyển sang điện thoại/máy khác, hãy nhấn <strong>"Tải file HTML đã cập nhật code"</strong> và gửi file vừa tải — điện thoại sẽ tự nhận diện phiên bản mới nhất!
             </p>
           </div>
-          <div class="flex flex-wrap gap-2.5 shrink-0">
+          <div class="flex flex-wrap gap-2.5 w-full">
             <button
               id="bank-cloud-sync-btn"
               type="button"
@@ -3011,6 +3065,7 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
       const pool = getQuizPoolQuestions();
       state.quizOrder = pool.map((q) => q.id);
       state.currentIndex = 0;
+      if (typeof quizTimer !== 'undefined') quizTimer.reset();
       renderLessonControls();
       renderQuizSection();
     }
@@ -3026,7 +3081,13 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
       const q = getQuestionById(questionId);
       if (!q) return;
 
+      if (typeof quizTimer !== 'undefined') quizTimer.onAnswerSelected();
       state.userAnswers[questionId] = optionIndex;
+
+      const allAnswered = state.quizOrder.length > 0 && state.quizOrder.every((id) => state.userAnswers[id] !== undefined);
+      if (allAnswered && typeof quizTimer !== 'undefined') {
+        quizTimer.finish();
+      }
       renderQuizSection();
     }
 
@@ -3044,6 +3105,7 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
       const poolIds = pool.map((q) => q.id);
       state.quizOrder = shouldShuffle ? shuffleArray(poolIds) : poolIds;
       state.currentIndex = 0;
+      if (typeof quizTimer !== 'undefined') quizTimer.reset();
       renderQuizSection();
       showToast(
         shouldShuffle ? 'Đã trộn ngẫu nhiên thứ tự câu hỏi và bắt đầu lại!' : 'Đã đặt lại bài làm từ đầu!',
@@ -3069,10 +3131,10 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
       });
       state.quizOrder = wrongIds;
       state.currentIndex = 0;
+      if (typeof quizTimer !== 'undefined') quizTimer.reset();
       renderQuizSection();
       showToast('Bắt đầu ôn lại ' + wrongIds.length + ' câu làm sai!', 'info');
     }
-
     function exitReviewWrongMode() {
       state.reviewWrongMode = false;
       state.quizOrder = getQuizPoolQuestions().map((q) => q.id);
@@ -3430,8 +3492,11 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
           message = 'Cố gắng lên nhé! Bạn có thể bấm nút bên dưới để ôn lại ngay các câu chưa đúng.';
         }
 
+        const timeNote = (typeof quizTimer !== 'undefined' && (quizTimer.isFinished || quizTimer.getElapsedSeconds() > 0))
+          ? ' ⏱️ Tổng thời gian làm bài: ' + quizTimer.getElapsedFormatted() + '.'
+          : '';
         document.getElementById('summary-emoji').textContent = emoji;
-        document.getElementById('summary-message').textContent = message;
+        document.getElementById('summary-message').textContent = message + timeNote;
 
         const reviewWrongBtn = document.getElementById('btn-review-wrong');
         if (wrongCount > 0) {
@@ -4534,6 +4599,212 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
     }
 
     // =========================================================================
+    // 11B. CHẾ ĐỘ ĐẾM GIỜ LÀM BÀI (BẤM GIỜ XUÔI & ĐẾM NGƯỢC)
+    // =========================================================================
+    const quizTimer = {
+      mode: 'stopwatch', // 'stopwatch' | 'countdown'
+      limitMinutes: 15,
+      elapsedSeconds: 0,
+      remainingSeconds: 15 * 60,
+      isRunning: false,
+      isFinished: false,
+      isTimeUp: false,
+      intervalId: null,
+
+      formatTime(totalSeconds) {
+        const safe = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+        const hours = Math.floor(safe / 3600);
+        const mins = Math.floor((safe % 3600) / 60);
+        const secs = safe % 60;
+        const mm = String(mins).padStart(2, '0');
+        const ss = String(secs).padStart(2, '0');
+        return hours > 0 ? String(hours).padStart(2, '0') + ':' + mm + ':' + ss : mm + ':' + ss;
+      },
+
+      getElapsedSeconds() {
+        return this.elapsedSeconds;
+      },
+
+      getElapsedFormatted() {
+        return this.formatTime(this.elapsedSeconds);
+      },
+
+      playBeep() {
+        try {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtx) return;
+          const ctx = new AudioCtx();
+          [0, 0.25, 0.5].forEach((delay) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = 880;
+            gain.gain.setValueAtTime(0.15, ctx.currentTime + delay);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.18);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(ctx.currentTime + delay);
+            osc.stop(ctx.currentTime + delay + 0.2);
+          });
+        } catch (e) {}
+      },
+
+      start() {
+        if (this.isRunning) return;
+        if (this.mode === 'countdown' && this.remainingSeconds <= 0) {
+          this.reset();
+        }
+        this.isFinished = false;
+        this.isTimeUp = false;
+        this.isRunning = true;
+        this.intervalId = setInterval(() => this.tick(), 1000);
+        this.renderUI();
+      },
+
+      pause() {
+        if (this.intervalId) {
+          clearInterval(this.intervalId);
+          this.intervalId = null;
+        }
+        this.isRunning = false;
+        this.renderUI();
+      },
+
+      toggle() {
+        if (this.isRunning) {
+          this.pause();
+        } else {
+          this.start();
+        }
+      },
+
+      finish() {
+        this.pause();
+        this.isFinished = true;
+        this.renderUI();
+      },
+
+      reset() {
+        this.pause();
+        const minInput = document.getElementById('timer-minutes-input');
+        const parsedMin = minInput ? parseInt(minInput.value, 10) : this.limitMinutes;
+        this.limitMinutes = Number.isFinite(parsedMin) && parsedMin >= 1 ? Math.min(300, parsedMin) : 15;
+        if (minInput) minInput.value = String(this.limitMinutes);
+        this.elapsedSeconds = 0;
+        this.remainingSeconds = this.limitMinutes * 60;
+        this.isFinished = false;
+        this.isTimeUp = false;
+        this.renderUI();
+      },
+
+      onAnswerSelected() {
+        if (!this.isRunning && !this.isFinished && !this.isTimeUp) {
+          this.start();
+        }
+      },
+
+      tick() {
+        this.elapsedSeconds += 1;
+        if (this.mode === 'countdown') {
+          this.remainingSeconds = Math.max(0, this.remainingSeconds - 1);
+          if (this.remainingSeconds <= 0) {
+            this.pause();
+            this.isTimeUp = true;
+            this.playBeep();
+            this.renderUI();
+            showToast('⏰ Đã hết giờ làm bài! Bạn vẫn có thể xem lại hoặc hoàn tất các câu còn lại.', 'warning');
+            return;
+          }
+        }
+        this.renderUI();
+      },
+
+      renderUI() {
+        const displayEl = document.getElementById('timer-display-badge');
+        const toggleBtn = document.getElementById('btn-timer-toggle');
+        const minWrap = document.getElementById('timer-minutes-wrap');
+        const modeSelect = document.getElementById('timer-mode-select');
+        const hintEl = document.getElementById('timer-hint-text');
+        if (!displayEl || !toggleBtn) return;
+
+        if (modeSelect && modeSelect.value !== this.mode) {
+          modeSelect.value = this.mode;
+        }
+        if (minWrap) {
+          minWrap.classList.toggle('hidden', this.mode !== 'countdown');
+        }
+
+        const shownSeconds = this.mode === 'countdown' ? this.remainingSeconds : this.elapsedSeconds;
+        displayEl.textContent = this.formatTime(shownSeconds);
+
+        if (this.isTimeUp) {
+          displayEl.className = 'px-4 py-1.5 rounded-2xl bg-rose-100 border-2 border-rose-500 text-rose-800 font-bold text-[22px] tracking-wider min-w-[110px] text-center animate-pulse';
+        } else if (this.mode === 'countdown' && this.isRunning && this.remainingSeconds <= 60) {
+          displayEl.className = 'px-4 py-1.5 rounded-2xl bg-amber-100 border-2 border-rose-500 text-rose-700 font-bold text-[22px] tracking-wider min-w-[110px] text-center animate-pulse';
+        } else if (this.isRunning) {
+          displayEl.className = 'px-4 py-1.5 rounded-2xl bg-emerald-100 border-2 border-emerald-500 text-emerald-900 font-bold text-[22px] tracking-wider min-w-[110px] text-center';
+        } else {
+          displayEl.className = 'px-4 py-1.5 rounded-2xl bg-purple-100 border-2 border-purple-400 text-purple-950 font-bold text-[22px] tracking-wider min-w-[110px] text-center';
+        }
+
+        if (this.isRunning) {
+          toggleBtn.textContent = '⏸ Tạm dừng';
+          toggleBtn.className = 'btn-vibrant px-4 py-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-[17px] shadow-md cursor-pointer';
+        } else {
+          toggleBtn.textContent = this.elapsedSeconds > 0 && !this.isTimeUp && !this.isFinished ? '▶ Tiếp tục' : '▶ Bắt đầu';
+          toggleBtn.className = 'btn-vibrant px-4 py-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-[17px] shadow-md cursor-pointer';
+        }
+
+        if (hintEl) {
+          if (this.isTimeUp) {
+            hintEl.innerHTML = '⏰ <strong>Hết giờ!</strong> Bạn đã dùng hết ' + this.limitMinutes + ' phút. Nhấn <strong>Đặt lại</strong> để làm lượt mới.';
+          } else if (this.isFinished) {
+            hintEl.innerHTML = '🏁 <strong>Đã hoàn thành bài!</strong> Tổng thời gian làm bài: <strong>' + this.getElapsedFormatted() + '</strong>.';
+          } else if (this.mode === 'countdown') {
+            hintEl.innerHTML = '⏳ Chế độ đếm ngược <strong>' + this.limitMinutes + ' phút</strong> — đồng hồ sẽ báo hiệu khi còn dưới 1 phút và phát âm báo khi hết giờ.';
+          } else {
+            hintEl.innerHTML = '💡 Tự động chạy khi bạn chọn đáp án đầu tiên, hoặc bấm <strong>Bắt đầu</strong> để tính giờ ngay. Tự động dừng khi hoàn thành hết bài.';
+          }
+        }
+      },
+
+      bindEvents() {
+        const modeSelect = document.getElementById('timer-mode-select');
+        const minInput = document.getElementById('timer-minutes-input');
+        const toggleBtn = document.getElementById('btn-timer-toggle');
+        const resetBtn = document.getElementById('btn-timer-reset');
+
+        if (modeSelect) {
+          modeSelect.addEventListener('change', (e) => {
+            this.mode = e.target.value === 'countdown' ? 'countdown' : 'stopwatch';
+            this.reset();
+          });
+        }
+        if (minInput) {
+          minInput.addEventListener('change', () => {
+            if (!this.isRunning) {
+              this.reset();
+            } else {
+              const parsed = parseInt(minInput.value, 10);
+              if (Number.isFinite(parsed) && parsed >= 1) {
+                this.limitMinutes = Math.min(300, parsed);
+                this.remainingSeconds = this.limitMinutes * 60;
+                this.renderUI();
+              }
+            }
+          });
+        }
+        if (toggleBtn) {
+          toggleBtn.addEventListener('click', () => this.toggle());
+        }
+        if (resetBtn) {
+          resetBtn.addEventListener('click', () => this.reset());
+        }
+        this.renderUI();
+      }
+    };
+
+    // =========================================================================
     // 12. KHỞI CHẠY ỨNG DỤNG
     // =========================================================================
     function bootstrapApp() {
@@ -4542,6 +4813,7 @@ Hình ảnh: https://duong-dan-anh-tuy-chon.jpg (không bắt buộc)</pre>
       syncQuizOrderWithQuestions();
       updateCorrectPickerUI();
       bindEvents();
+      quizTimer.bindEvents();
       renderAll();
       initCloudStorage();
       initGoogleDriveSync();
