@@ -593,7 +593,7 @@
 
       <!-- Khu vực Lưu trữ & Xuất code -->
       <section class="colorful-card rounded-3xl p-5 sm:p-6 border-2 border-amber-300 bg-gradient-to-r from-amber-50/90 via-pink-50/90 to-sky-50/90">
-        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div class="flex flex-col gap-4">
           <div>
             <h2 class="text-[22px] font-bold text-purple-950 flex items-center gap-2">
               <span>⚡</span>
@@ -603,7 +603,7 @@
               Dữ liệu ôn thi THPTQG được lưu riêng thành file <strong>on_thi_thptqg_database.json</strong> trên Google Drive (không ảnh hưởng dữ liệu app khác). Khi chuyển máy ngoại tuyến, nhấn <strong>"Tải file HTML đã cập nhật code"</strong>.
             </p>
           </div>
-          <div class="flex flex-wrap gap-2.5 shrink-0">
+          <div class="flex flex-wrap gap-2.5 w-full">
             <button
               id="bank-cloud-sync-btn"
               type="button"
@@ -659,9 +659,9 @@
         </div>
       </section>
 
-      <!-- Quản lý danh mục Chuyên đề / Bài học THPTQG -->
+      <!-- <!-- Quản lý danh mục Chuyên đề / Bài học THPTQG -->
       <section class="colorful-card rounded-3xl p-5 sm:p-6 border-2 border-purple-200">
-        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4">
+        <div class="flex flex-col gap-3 mb-4">
           <div>
             <h2 class="text-[22px] font-bold text-purple-950 flex items-center gap-2">
               <span>🗂️</span>
@@ -671,19 +671,19 @@
               Tạo chuyên đề mới theo môn (vd: <em>Di truyền học phân tử</em>, <em>Tiến hóa</em>, <em>Khảo sát hàm số</em>...), đổi tên hoặc lọc nhanh câu hỏi.
             </p>
           </div>
-          <div class="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+          <div class="flex flex-col sm:flex-row gap-2 w-full">
             <input
               id="input-new-lesson-subject"
               type="text"
               list="subject-suggestions"
               placeholder="Môn (vd: Sinh học)"
-              class="sm:w-44 px-3.5 py-2.5 rounded-2xl border-2 border-pink-200 focus:border-pink-500 focus:outline-none bg-white text-[18px]"
+              class="sm:w-48 px-3.5 py-2.5 rounded-2xl border-2 border-pink-200 focus:border-pink-500 focus:outline-none bg-white text-[18px]"
             />
             <input
               id="input-new-lesson-name"
               type="text"
               placeholder="Tên chuyên đề / bài mới..."
-              class="flex-1 lg:w-64 px-4 py-2.5 rounded-2xl border-2 border-purple-200 focus:border-pink-500 focus:outline-none bg-white text-[18px]"
+              class="flex-1 min-w-0 px-4 py-2.5 rounded-2xl border-2 border-purple-200 focus:border-pink-500 focus:outline-none bg-white text-[18px]"
             />
             <button
               id="btn-add-lesson"
